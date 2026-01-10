@@ -45,7 +45,6 @@ public class CommentService {
     // Lấy bình luận của chương
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByChapterId(Long chapterId, int page, int size) {
-        // Kiểm tra chương tồn tại
         chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Chương", "id", chapterId));
 
