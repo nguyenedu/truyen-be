@@ -111,7 +111,17 @@ services:
     environment:
       KAFKA_BROKERCONNECT: kafka1:9092,kafka2:9092,kafka3:9092
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
 volumes:
   kafka1_data:
   kafka2_data:
   kafka3_data:
+  redis_data:
