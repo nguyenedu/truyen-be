@@ -1,6 +1,9 @@
 package com.example.truyen.controller;
 
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import com.example.truyen.dto.request.ChangeRoleRequest;
 import com.example.truyen.dto.request.UpdateUserRequest;
 import com.example.truyen.dto.response.ApiResponse;
@@ -93,4 +96,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Đếm User thành công", count));
     }
 
+    @RestController
+    @RequestMapping("/api/test")
+    public class TestController {
+
+        @GetMapping("/hello")
+        public String hello() {
+            return "Hello World!";
+        }
+    }
 }
