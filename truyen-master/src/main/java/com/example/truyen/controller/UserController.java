@@ -17,7 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -94,15 +94,5 @@ public class UserController {
     public ResponseEntity<ApiResponse<Long>> countUserByRole(@PathVariable String role) {
         Long count = userService.countUsersByRole(role);
         return ResponseEntity.ok(ApiResponse.success("Đếm User thành công", count));
-    }
-
-    @RestController
-    @RequestMapping("/api/test")
-    public class TestController {
-
-        @GetMapping("/hello")
-        public String hello() {
-            return "Hello World!";
-        }
     }
 }
