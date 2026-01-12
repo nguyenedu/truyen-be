@@ -5,7 +5,6 @@ import com.example.truyen.dto.request.ChangeRoleRequest;
 import com.example.truyen.dto.request.UpdateUserRequest;
 import com.example.truyen.dto.response.ApiResponse;
 import com.example.truyen.dto.response.UserResponse;
-import com.example.truyen.entity.User;
 import com.example.truyen.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

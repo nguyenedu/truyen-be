@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/chapters/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/authors/**").permitAll()
+                        .requestMatchers("api/users/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
