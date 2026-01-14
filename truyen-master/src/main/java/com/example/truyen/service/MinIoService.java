@@ -20,6 +20,9 @@ public class MinIoService {
     @Value("${minio.bucket}")
     private String bucket;
 
+    @Value("${minio.url}")
+    private String minioUrl;
+
     public String uploadFile(MultipartFile file, String folder) {
         try{
             String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
@@ -34,7 +37,7 @@ public class MinIoService {
                             .build()
             );
 
-            return "http://localhost:9002" + bucket + "/" + objectName;
+            return minioUrl + "/" +  bucket + "/" + objectName;
 
         }catch (Exception e){
             throw new RuntimeException("Upload file thất bại", e);
