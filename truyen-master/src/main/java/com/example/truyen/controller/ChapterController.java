@@ -48,7 +48,7 @@ public class ChapterController {
 
     // Tạo chương mới (CHỈ ADMIN)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> createChapter(
             @Valid @RequestBody ChapterRequest request
     ) {
@@ -60,7 +60,7 @@ public class ChapterController {
 
     // Cập nhật chương (CHỈ ADMIN)
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> updateChapter(
             @PathVariable Long id,
             @Valid @RequestBody ChapterRequest request
@@ -71,7 +71,7 @@ public class ChapterController {
 
     // Xóa chương (CHỈ ADMIN)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteChapter(@PathVariable Long id) {
         chapterService.deleteChapter(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa chương thành công", null));
