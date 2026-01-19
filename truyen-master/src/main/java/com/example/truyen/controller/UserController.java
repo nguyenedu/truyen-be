@@ -88,7 +88,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Xóa User thành công", null));
     }
 
-    //Thống kê số lượng user theo role
+    //Thống kê số lượng user theo role (Chỉ ADMIN, SUPER_ADMIN)
     @GetMapping("/count-by-role/{role}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Long>> countUserByRole(@PathVariable String role) {
