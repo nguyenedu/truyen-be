@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5174")
 @RestController
 @RequestMapping("/api/stories")
 @RequiredArgsConstructor
@@ -83,7 +83,7 @@ public class StoryController {
 
     // Tạo truyện mới
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> createStory(
             @Valid @RequestBody StoryRequest request
     ) {
@@ -95,7 +95,7 @@ public class StoryController {
 
     // Cập nhật truyện
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> updateStory(
             @PathVariable Long id,
             @Valid @RequestBody StoryRequest request
@@ -106,7 +106,7 @@ public class StoryController {
 
     // Xóa truyện
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteStory(@PathVariable Long id) {
         storyService.deleteStory(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa truyện thành công", null));

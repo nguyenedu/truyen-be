@@ -34,9 +34,9 @@ public class    AuthorController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tác giả thành công", author));
     }
 
-    // Tạo tác giả mới (CHỈ ADMIN)
+    // Tạo tác giả mới (CHỈ ADMIN và SUPER_ADMIN)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> createAuthor(
             @Valid @RequestBody AuthorRequest request
     ) {
@@ -46,9 +46,9 @@ public class    AuthorController {
                 .body(ApiResponse.success("Tạo tác giả thành công", author));
     }
 
-    // Cập nhật tác giả (CHỈ ADMIN)
+    // Cập nhật tác giả (CHỈ ADMIN  và SUPER_ADMIN)
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> updateAuthor(
             @PathVariable Long id,
             @Valid @RequestBody AuthorRequest request
@@ -57,9 +57,9 @@ public class    AuthorController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật tác giả thành công", author));
     }
 
-    // Xóa tác giả (CHỈ ADMIN)
+    // Xóa tác giả (CHỈ ADMIN và SUPER_ADMIN)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteAuthor(@PathVariable Long id) {
         authorService.deleteAuthor(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa tác giả thành công", null));
