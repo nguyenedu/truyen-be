@@ -81,7 +81,7 @@ public class StoryController {
         return ResponseEntity.ok(ApiResponse.success("Lấy truyện mới nhất thành công", stories));
     }
 
-    // Tạo truyện mới
+    // Tạo truyện mới (CHỈ ADMIN và SUPER_ADMIN)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> createStory(
@@ -93,7 +93,7 @@ public class StoryController {
                 .body(ApiResponse.success("Tạo truyện thành công", story));
     }
 
-    // Cập nhật truyện
+    // Cập nhật truyện (CHỈ ADMIN và SUPER_ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> updateStory(
@@ -104,7 +104,7 @@ public class StoryController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật truyện thành công", story));
     }
 
-    // Xóa truyện
+    // Xóa truyện (CHỈ ADMIN và SUPER_ADMIN)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteStory(@PathVariable Long id) {

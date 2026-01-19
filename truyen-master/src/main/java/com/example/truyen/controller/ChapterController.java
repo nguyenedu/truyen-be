@@ -46,7 +46,7 @@ public class ChapterController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin chương thành công", chapter));
     }
 
-    // Tạo chương mới (CHỈ ADMIN)
+    // Tạo chương mới (CHỈ ADMIN và SUPER_ADMIN)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> createChapter(
@@ -58,7 +58,7 @@ public class ChapterController {
                 .body(ApiResponse.success("Tạo chương thành công", chapter));
     }
 
-    // Cập nhật chương (CHỈ ADMIN)
+    // Cập nhật chương (CHỈ ADMIN và SUPER_ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> updateChapter(
@@ -69,7 +69,7 @@ public class ChapterController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật chương thành công", chapter));
     }
 
-    // Xóa chương (CHỈ ADMIN)
+    // Xóa chương (CHỈ ADMIN và SUPER_ADMIN)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteChapter(@PathVariable Long id) {

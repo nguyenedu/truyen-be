@@ -34,7 +34,7 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin thể loại thành công", category));
     }
 
-    // Tạo thể loại mới (CHỈ ADMIN)
+    // Tạo thể loại mới (CHỈ ADMIN và SUPER_ADMIN)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
@@ -46,7 +46,7 @@ public class CategoryController {
                 .body(ApiResponse.success("Tạo thể loại thành công", category));
     }
 
-    // Cập nhật thể loại (CHỈ ADMIN)
+    // Cập nhật thể loại (CHỈ ADMIN và SUPER_ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
@@ -57,7 +57,7 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thể loại thành công", category));
     }
 
-    // Xóa thể loại (CHỈ ADMIN)
+    // Xóa thể loại (CHỈ ADMIN và SUPER_ADMIN)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteCategory(@PathVariable Long id) {
