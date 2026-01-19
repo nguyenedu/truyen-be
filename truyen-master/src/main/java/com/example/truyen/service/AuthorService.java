@@ -22,7 +22,6 @@ public class AuthorService {
 
     // Lấy tất cả tác giả
     @Transactional(readOnly = true)
-    @Cacheable(value = "authors")
     public List<AuthorResponse> getAllAuthors() {
         List<Author> authors = authorRepository.findAll();
         return authors.stream()
