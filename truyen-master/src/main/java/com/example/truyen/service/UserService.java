@@ -1,6 +1,7 @@
 package com.example.truyen.service;
 
 import com.example.truyen.dto.request.ChangeRoleRequest;
+import com.example.truyen.dto.request.CreateUserRequest;
 import com.example.truyen.dto.request.UpdateUserRequest;
 import com.example.truyen.dto.response.UserResponse;
 import com.example.truyen.entity.User;
@@ -13,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // Lấy tất cả users
     @Transactional(readOnly = true)
@@ -44,6 +47,7 @@ public class UserService {
         User currentUser = getCurrentUserEntity();
         return convertToResponse(currentUser);
     }
+
 
     // Cập nhật thông tin user
     @Transactional
@@ -206,6 +210,29 @@ public class UserService {
         }
     }
 
+    @Transactional
+    public UserResponse createUser(CreateUserRequest request) {
+
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException("Username đã tồn tại");
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email đã tồn tại");
+        }
+
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
+                .fullname(request.getFullname())
+                .phone(request.getPhone())
+                .role(User.Role.USER)
+                .isActive(true)
+                .build();
+        return mapToResponse(userRepository.save(user));
+    }
+
     //getCurrentUserEntity
     private User getCurrentUserEntity() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -215,6 +242,20 @@ public class UserService {
     }
 
     private UserResponse convertToResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullname(user.getFullname())
+                .avatar(user.getAvatar())
+                .phone(user.getPhone())
+                .role(user.getRole().name())
+                .isActive(user.getIsActive())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    private UserResponse mapToResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
