@@ -53,7 +53,7 @@ public class LoggingAspect {
         String parameters = activityLogService.convertObjectToJson(args);
 
         // Lấy thông tin user và IP
-        Integer userId = getCurrentUserId();
+        Long userId = getCurrentUserId();
         String ipAddress = getClientIpAddress();
 
         // Log ra console
@@ -119,7 +119,7 @@ public class LoggingAspect {
     /**
      * Lấy User ID từ Spring Security Context
      */
-    private Integer getCurrentUserId() {
+    private Long getCurrentUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -185,24 +185,24 @@ public class LoggingAspect {
     /**
      * Trích xuất record ID từ result hoặc args
      */
-    private Integer extractRecordId(Object result, Object[] args) {
+    private Long extractRecordId(Object result, Object[] args) {
         try {
             // Nếu result có method getId()
             if (result != null) {
                 Method getIdMethod = result.getClass().getMethod("getId");
                 Object id = getIdMethod.invoke(result);
                 if (id instanceof Integer) {
-                    return (Integer) id;
+                    return (Long) id;
                 } else if (id instanceof Long) {
-                    return ((Long) id).intValue();
+                    return ((Long) id).longValue();
                 }
             }
 
             // Hoặc lấy từ parameter đầu tiên nếu là ID
             if (args.length > 0 && args[0] instanceof Long) {
-                return ((Long) args[0]).intValue();
+                return ((Long) args[0]).longValue();
             } else if (args.length > 0 && args[0] instanceof Integer) {
-                return (Integer) args[0];
+                return (Long) args[0];
             }
         } catch (Exception e) {
             // Không extract được ID

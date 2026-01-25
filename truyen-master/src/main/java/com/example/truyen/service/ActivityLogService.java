@@ -23,10 +23,6 @@ public class ActivityLogService {
     private final ActivityLogRepository activityLogRepository;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Lưu activity log bất đồng bộ
-     * Sử dụng REQUIRES_NEW để đảm bảo log vẫn được lưu khi transaction chính rollback
-     */
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveLog(ActivityLog activityLog) {
@@ -38,9 +34,6 @@ public class ActivityLogService {
         }
     }
 
-    /**
-     * Lưu log đồng bộ (dùng khi cần chắc chắn log được lưu)
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveLogSync(ActivityLog activityLog) {
         try {
@@ -50,11 +43,9 @@ public class ActivityLogService {
         }
     }
 
-    /**
-     * Tạo log từ thông tin cơ bản
-     */
-    public ActivityLog createLog(Integer userId, String action, String tableName,
-                                 Integer recordId, Object data, String ipAddress) {
+    // ĐÃ SỬA: Integer -> Long
+    public ActivityLog createLog(Long userId, String action, String tableName,
+                                 Long recordId, Object data, String ipAddress) {
         String description = convertObjectToJson(data);
 
         return ActivityLog.builder()
@@ -68,9 +59,6 @@ public class ActivityLogService {
                 .build();
     }
 
-    /**
-     * Convert object sang JSON string
-     */
     public String convertObjectToJson(Object obj) {
         if (obj == null) {
             return null;
@@ -84,53 +72,35 @@ public class ActivityLogService {
         }
     }
 
-    /**
-     * Lấy logs theo user
-     */
     @Transactional(readOnly = true)
-    public Page<ActivityLog> getLogsByUser(Integer userId, Pageable pageable) {
+    public Page<ActivityLog> getLogsByUser(Long userId, Pageable pageable) {
         return activityLogRepository.findByUserId(userId, pageable);
     }
 
-    /**
-     * Lấy logs theo action
-     */
     @Transactional(readOnly = true)
     public Page<ActivityLog> getLogsByAction(String action, Pageable pageable) {
         return activityLogRepository.findByAction(action, pageable);
     }
 
-    /**
-     * Lấy logs theo table
-     */
     @Transactional(readOnly = true)
     public Page<ActivityLog> getLogsByTable(String tableName, Pageable pageable) {
         return activityLogRepository.findByTableName(tableName, pageable);
     }
 
-    /**
-     * Lấy logs theo khoảng thời gian
-     */
     @Transactional(readOnly = true)
     public Page<ActivityLog> getLogsByDateRange(LocalDateTime start, LocalDateTime end,
                                                 Pageable pageable) {
         return activityLogRepository.findByCreatedAtBetween(start, end, pageable);
     }
 
-    /**
-     * Search logs với nhiều điều kiện
-     */
     @Transactional(readOnly = true)
-    public Page<ActivityLog> searchLogs(Integer userId, String action, String tableName,
+    public Page<ActivityLog> searchLogs(Long userId, String action, String tableName,
                                         LocalDateTime startDate, LocalDateTime endDate,
                                         Pageable pageable) {
         return activityLogRepository.searchLogs(userId, action, tableName,
                 startDate, endDate, pageable);
     }
 
-    /**
-     * Lấy tất cả logs
-     */
     @Transactional(readOnly = true)
     public Page<ActivityLog> getAllLogs(Pageable pageable) {
         return activityLogRepository.findAll(pageable);

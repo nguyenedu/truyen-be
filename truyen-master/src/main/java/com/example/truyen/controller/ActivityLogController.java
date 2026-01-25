@@ -28,7 +28,7 @@ public class ActivityLogController {
             @RequestParam(defaultValue = "DESC") String sortDir,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String tableName,
-            @RequestParam(required = false) Integer userId
+            @RequestParam(required = false) Long userId
     ) {
         Sort sort = sortDir.equalsIgnoreCase("ASC")
                 ? Sort.by(sortBy).ascending()
@@ -52,7 +52,7 @@ public class ActivityLogController {
     //@GetMapping("/user/{userId}")
     //@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")  /
     public ResponseEntity<Page<ActivityLog>> getLogsByUser(
-            @PathVariable Integer userId,
+            @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {

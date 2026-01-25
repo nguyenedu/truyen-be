@@ -1,6 +1,8 @@
 package com.example.truyen.controller;
 
 
+import com.example.truyen.dto.request.CreateUserRequest;
+import com.example.truyen.entity.User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -95,4 +97,18 @@ public class UserController {
         Long count = userService.countUsersByRole(role);
         return ResponseEntity.ok(ApiResponse.success("Đếm User thành công", count));
     }
+
+    private final UserService UserService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<UserResponse> createUser(
+            @RequestBody CreateUserRequest request) {
+
+        return ApiResponse.success(
+                "Tạo người dùng thành công",
+                userService.createUser(request)
+        );
+    }
+
 }

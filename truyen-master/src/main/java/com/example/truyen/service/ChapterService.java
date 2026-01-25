@@ -48,7 +48,7 @@ public class ChapterService {
         return convertToResponse(chapter);
     }
 
-    // Lấy chương theo story và chapter number
+    // Lấy chương theo Idstory và chapter number
     @Transactional
     public ChapterResponse getChapterByStoryAndNumber(Long storyId, Integer chapterNumber) {
         Chapter chapter = chapterRepository.findByStoryIdAndChapterNumber(storyId, chapterNumber)

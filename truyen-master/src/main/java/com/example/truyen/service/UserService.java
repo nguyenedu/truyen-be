@@ -49,7 +49,7 @@ public class UserService {
     }
 
 
-    // Cập nhật thông tin user
+    // Cập nhật thông tin user - Method này thay thế cho method updateUser hiện tại
     @Transactional
     public UserResponse updateUser(Long id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
@@ -57,28 +57,41 @@ public class UserService {
 
         // Kiểm tra quyền
         User currentUser = getCurrentUserEntity();
-        if (!currentUser.getId().equals(id) && !currentUser.getRole().equals(User.Role.SUPER_ADMIN) && !currentUser.getRole().equals(User.Role.ADMIN)) {
+        if (!currentUser.getId().equals(id) &&
+                !currentUser.getRole().equals(User.Role.SUPER_ADMIN) &&
+                !currentUser.getRole().equals(User.Role.ADMIN)) {
             throw new BadRequestException("Bạn không có quyền cập nhật thông tin user này");
         }
 
-        // Cập nhật thông tin
+        // Cập nhật fullname
         if (request.getFullname() != null) {
             user.setFullname(request.getFullname());
         }
+
+        // Cập nhật email
         if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new BadRequestException("Email đã tồn tại");
             }
             user.setEmail(request.getEmail());
         }
+
+        // Cập nhật avatar
         if (request.getAvatar() != null) {
             user.setAvatar(request.getAvatar());
         }
+
+        // Cập nhật phone
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
 
-        // Chỉ SUPER_ADMIN và ADMIN mới có thể kích hoạt/vô hiệu hóa tài khoản (Không cnaanf biết trạng thái hiện tại như nào)
+        // Cập nhật password nếu có
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        // Chỉ SUPER_ADMIN và ADMIN mới có thể kích hoạt/vô hiệu hóa tài khoản
         if (request.getIsActive() != null &&
                 (currentUser.getRole().equals(User.Role.SUPER_ADMIN) ||
                         currentUser.getRole().equals(User.Role.ADMIN))) {

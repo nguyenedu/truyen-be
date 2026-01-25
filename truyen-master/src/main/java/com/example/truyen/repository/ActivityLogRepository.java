@@ -11,44 +11,29 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 
 @Repository
-public interface ActivityLogRepository extends JpaRepository<ActivityLog, Integer> {
+public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
-    // Tìm theo user_id
-    Page<ActivityLog> findByUserId(Integer userId, Pageable pageable);
+    // Tìm theo userId - ĐÃ SỬA: Integer -> Long
+    Page<ActivityLog> findByUserId(Long userId, Pageable pageable);
 
     // Tìm theo action
     Page<ActivityLog> findByAction(String action, Pageable pageable);
 
-    // Tìm theo table_name
+    // Tìm theo tableName
     Page<ActivityLog> findByTableName(String tableName, Pageable pageable);
 
     // Tìm theo khoảng thời gian
-    Page<ActivityLog> findByCreatedAtBetween(
-            LocalDateTime start,
-            LocalDateTime end,
-            Pageable pageable
-    );
-
-    // Tìm theo user và thời gian
-    Page<ActivityLog> findByUserIdAndCreatedAtBetween(
-            Integer userId,
-            LocalDateTime start,
-            LocalDateTime end,
-            Pageable pageable
-    );
-
-    // Tìm theo user và action
-    Page<ActivityLog> findByUserIdAndAction(Integer userId, String action, Pageable pageable);
+    Page<ActivityLog> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
 
     // Search với nhiều điều kiện
-    @Query("SELECT al FROM ActivityLog al WHERE " +
-            "(:userId IS NULL OR al.userId = :userId) AND " +
-            "(:action IS NULL OR al.action LIKE %:action%) AND " +
-            "(:tableName IS NULL OR al.tableName = :tableName) AND " +
-            "(:startDate IS NULL OR al.createdAt >= :startDate) AND " +
-            "(:endDate IS NULL OR al.createdAt <= :endDate)")
+    @Query("SELECT a FROM ActivityLog a WHERE " +
+            "(:userId IS NULL OR a.userId = :userId) AND " +
+            "(:action IS NULL OR a.action = :action) AND " +
+            "(:tableName IS NULL OR a.tableName = :tableName) AND " +
+            "(:startDate IS NULL OR a.createdAt >= :startDate) AND " +
+            "(:endDate IS NULL OR a.createdAt <= :endDate)")
     Page<ActivityLog> searchLogs(
-            @Param("userId") Integer userId,
+            @Param("userId") Long userId,
             @Param("action") String action,
             @Param("tableName") String tableName,
             @Param("startDate") LocalDateTime startDate,

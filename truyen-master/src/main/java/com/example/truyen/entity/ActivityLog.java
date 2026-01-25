@@ -18,10 +18,10 @@ public class ActivityLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "user_id")
-    private Integer userId;
+    private Long userId;
 
     @Column(name = "action", nullable = false, length = 100)
     private String action;
@@ -30,7 +30,7 @@ public class ActivityLog {
     private String tableName;
 
     @Column(name = "record_id")
-    private Integer recordId;
+    private Long recordId;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
