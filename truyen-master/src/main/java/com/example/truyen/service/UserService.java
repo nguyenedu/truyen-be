@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -252,6 +253,26 @@ public class UserService {
         String username = authentication.getName();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+    }
+
+    // Thêm method này vào UserService.java
+
+    // Tìm kiếm users với pagination
+    @Transactional(readOnly = true)
+    public Page<UserResponse> searchUsers(String keyword, int page, int size, String sortField, String sortDir) {
+        // Xử lý sort
+        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
+        // Nếu keyword trống, trả về tất cả
+        if (keyword == null || keyword.trim().isEmpty()) {
+            Page<User> users = userRepository.findAll(pageable);
+            return users.map(this::convertToResponse);
+        }
+
+        // Tìm kiếm theo keyword
+        Page<User> users = userRepository.searchUsers(keyword.trim(), pageable);
+        return users.map(this::convertToResponse);
     }
 
     private UserResponse convertToResponse(User user) {

@@ -89,6 +89,24 @@ public class AuthorService {
         authorRepository.delete(author);
     }
 
+    // Tìm kiếm tác giả theo tên
+    @Transactional(readOnly = true)
+    public List<AuthorResponse> searchAuthors(String name) {
+        List<Author> authors;
+
+        if (name == null || name.trim().isEmpty()) {
+            // Nếu không có từ khóa, trả về tất cả
+            authors = authorRepository.findAll();
+        } else {
+            // Tìm kiếm theo tên
+            authors = authorRepository.findByNameContainingIgnoreCase(name.trim());
+        }
+
+        return authors.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     // Convert Entity sang Response DTO
     private AuthorResponse convertToResponse(Author author) {
         return AuthorResponse.builder()

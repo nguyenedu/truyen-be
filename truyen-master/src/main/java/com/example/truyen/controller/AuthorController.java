@@ -64,4 +64,13 @@ public class    AuthorController {
         authorService.deleteAuthor(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa tác giả thành công", null));
     }
+
+    // Tìm kiếm tác giả theo tên
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<AuthorResponse>>> searchAuthors(
+            @RequestParam(required = false) String name
+    ) {
+        List<AuthorResponse> authors = authorService.searchAuthors(name);
+        return ResponseEntity.ok(ApiResponse.success("Tìm kiếm tác giả thành công", authors));
+    }
 }

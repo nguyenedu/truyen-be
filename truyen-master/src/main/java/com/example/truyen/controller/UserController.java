@@ -111,4 +111,18 @@ public class UserController {
         );
     }
 
+    // Tìm kiếm users (Chỉ ADMIN và SUPER_ADMIN)
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortField,
+            @RequestParam(defaultValue = "asc") String sortDir
+    ) {
+        Page<UserResponse> users = userService.searchUsers(keyword, page, size, sortField, sortDir);
+        return ResponseEntity.ok(ApiResponse.success("Tìm kiếm người dùng thành công", users));
+    }
+
 }
