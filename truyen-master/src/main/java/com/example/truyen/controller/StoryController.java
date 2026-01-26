@@ -8,12 +8,14 @@ import com.example.truyen.service.StoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -159,7 +161,7 @@ public class StoryController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật ảnh bìa thành công", story));
     }
 
-    // CẬP NHẬT TRUYỆN VỚI ẢNH MỚI (multipart/form-data)
+    // CẬP NHẬT TRUYỆN VỚI ẢNH MỚI
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> updateStoryWithImage(
@@ -196,7 +198,7 @@ public class StoryController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật truyện thành công", story));
     }
 
-    // CẬP NHẬT TRUYỆN BẰNG JSON (giữ lại endpoint cũ)
+    // CẬP NHẬT TRUYỆN BẰNG JSON
     @PutMapping(value = "/{id}", consumes = {"application/json"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<StoryResponse>> updateStory(
@@ -213,5 +215,25 @@ public class StoryController {
     public ResponseEntity<ApiResponse<String>> deleteStory(@PathVariable Long id) {
         storyService.deleteStory(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa truyện thành công", null));
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<ApiResponse<Page<StoryResponse>>> filterStories(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long authorId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer minChapters,
+            @RequestParam(required = false) Integer maxChapters,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,desc") String sort
+    ) {
+        Page<StoryResponse> stories = storyService.filterStories(
+                keyword, authorId, status, minChapters, maxChapters,
+                startDate, endDate, page, size, sort
+        );
+        return ResponseEntity.ok(ApiResponse.success("Lọc truyện thành công", stories));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -30,4 +31,23 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
 
     @Query("SELECT s FROM Story s ORDER BY s.createdAt DESC")
     Page<Story> findAllOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("SELECT s FROM Story s WHERE " +
+            "(:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+            "(:authorId IS NULL OR s.author.id = :authorId) AND " +
+            "(:status IS NULL OR s.status = :status) AND " +
+            "(:minChapters IS NULL OR s.totalChapters >= :minChapters) AND " +
+            "(:maxChapters IS NULL OR s.totalChapters <= :maxChapters) AND " +
+            "(:startDate IS NULL OR s.createdAt >= :startDate) AND " +
+            "(:endDate IS NULL OR s.createdAt <= :endDate)")
+    Page<Story> filterStories(
+            @Param("keyword") String keyword,
+            @Param("authorId") Long authorId,
+            @Param("status") Story.Status status,
+            @Param("minChapters") Integer minChapters,
+            @Param("maxChapters") Integer maxChapters,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable
+    );
 }

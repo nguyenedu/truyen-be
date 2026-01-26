@@ -14,9 +14,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -173,6 +175,54 @@ public class StoryService {
         story.setTotalViews(story.getTotalViews() + 1);
         storyRepository.save(story);
     }
+
+    @Transactional(readOnly = true)
+    public Page<StoryResponse> filterStories(
+            String keyword,
+            Long authorId,
+            String status,
+            Integer minChapters,
+            Integer maxChapters,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            int page,
+            int size,
+            String sort
+    ) {
+        // Parse sort
+        String[] sortParams = sort.split(",");
+        String sortField = sortParams[0];
+        String sortDir = sortParams.length > 1 ? sortParams[1] : "asc";
+
+        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ?
+                Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
+        // Parse status
+        Story.Status storyStatus = null;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                storyStatus = Story.Status.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid status
+            }
+        }
+
+        // Call repository
+        Page<Story> stories = storyRepository.filterStories(
+                keyword,
+                authorId,
+                storyStatus,
+                minChapters,
+                maxChapters,
+                startDate,
+                endDate,
+                pageable
+        );
+
+        return stories.map(this::convertToResponse);
+    }
+
 
     // Convert Entity sang Response DTO
     private StoryResponse convertToResponse(Story story) {
