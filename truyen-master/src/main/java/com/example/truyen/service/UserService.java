@@ -255,8 +255,6 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
     }
 
-    // Thêm method này vào UserService.java
-
     // Tìm kiếm users với pagination
     @Transactional(readOnly = true)
     public Page<UserResponse> searchUsers(String keyword, int page, int size, String sortField, String sortDir) {

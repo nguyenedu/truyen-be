@@ -87,7 +87,7 @@ public class LoggingAspect {
                     .createdAt(LocalDateTime.now())
                     .build();
 
-            // Lưu vào database (bất đồng bộ)
+            // Lưu vào database
             activityLogService.saveLog(activityLog);
 
             return result;
@@ -131,7 +131,7 @@ public class LoggingAspect {
                 // Inject UserRepository vào LoggingAspect và query
                 // Hoặc cache userId trong custom UserDetails
 
-                return null; // TODO: Query userId from username
+                return null;
             }
         } catch (Exception e) {
             log.warn("Không lấy được user info: {}", e.getMessage());

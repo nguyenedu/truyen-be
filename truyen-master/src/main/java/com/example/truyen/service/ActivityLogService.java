@@ -43,7 +43,6 @@ public class ActivityLogService {
         }
     }
 
-    // ĐÃ SỬA: Integer -> Long
     public ActivityLog createLog(Long userId, String action, String tableName,
                                  Long recordId, Object data, String ipAddress) {
         String description = convertObjectToJson(data);
