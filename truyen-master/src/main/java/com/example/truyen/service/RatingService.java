@@ -99,7 +99,7 @@ public class RatingService {
         storyRepository.findById(storyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Truyện", "id", storyId));
 
-        Double averageRating = ratingRepository.getAverageRatingByStoryId(storyId);
+        Double averageRating = ratingRepository.getAverageRating(storyId);
         Long totalRatings = ratingRepository.countByStoryId(storyId);
 
         Map<String, Object> result = new HashMap<>();

@@ -4,6 +4,7 @@ import com.example.truyen.entity.Story;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -52,4 +53,10 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    List<Story> findByStatusIn (List<Story.Status> statuses);
+
+    @Modifying
+    @Query("UPDATE Story s SET s.totalViews = COALESCE(s.totalViews, 0) + :increment WHERE s.id = :storyId")
+    void incrementTotalViews(@Param("storyId") Long storyId, @Param("increment") int increment);
 }

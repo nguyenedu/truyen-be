@@ -42,6 +42,6 @@ public class Ranking {
     private LocalDateTime createdAt;
 
     public enum RankingType {
-        DAYLY, WEEKLY, MONTHLY
+        DAILY, WEEKLY, MONTHLY
     }
 }
