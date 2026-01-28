@@ -32,6 +32,8 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
     @Query("SELECT s FROM Story s ORDER BY s.createdAt DESC")
     Page<Story> findAllOrderByCreatedAtDesc(Pageable pageable);
 
+    List<Story> findByAuthorId(Long authorId);
+
     @Query("SELECT s FROM Story s WHERE " +
             "(:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "(:authorId IS NULL OR s.author.id = :authorId) AND " +

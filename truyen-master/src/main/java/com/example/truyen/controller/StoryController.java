@@ -3,6 +3,7 @@ package com.example.truyen.controller;
 import com.example.truyen.dto.request.StoryRequest;
 import com.example.truyen.dto.response.ApiResponse;
 import com.example.truyen.dto.response.StoryResponse;
+import com.example.truyen.entity.Story;
 import com.example.truyen.service.MinIoService;
 import com.example.truyen.service.StoryService;
 import jakarta.validation.Valid;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -215,6 +217,15 @@ public class StoryController {
     public ResponseEntity<ApiResponse<String>> deleteStory(@PathVariable Long id) {
         storyService.deleteStory(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa truyện thành công", null));
+    }
+
+    @GetMapping("/author/{authorId}")
+    public ApiResponse<List<StoryResponse>> getStoriesByAuthor(
+            @PathVariable Long authorId
+    ) {
+        return ApiResponse.success(
+                storyService.getStoriesByAuthor(authorId)
+        );
     }
 
     @GetMapping("/filter")

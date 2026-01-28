@@ -228,9 +228,7 @@ public class LoggingAspect {
         );
     }
 
-    /**
-     * Build description cho error case
-     */
+    //Miêu tả thông tin lỗi
     private String buildErrorDescription(String methodName, String parameters,
                                          String errorMessage, long executionTime) {
         return String.format(

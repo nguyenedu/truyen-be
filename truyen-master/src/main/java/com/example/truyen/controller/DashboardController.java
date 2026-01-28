@@ -14,11 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class DashboardController {
 
     private final DashboardService dashboardService;
-
-    /**
-     * Lấy thống kê dashboard
-     * @param period "week" hoặc "month" (mặc định: month)
-     */
+    // Lấy thống kê dashboard (CHỈ ADMIN và SUPER_ADMIN)
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DashboardStatsResponse>> getDashboardStats(

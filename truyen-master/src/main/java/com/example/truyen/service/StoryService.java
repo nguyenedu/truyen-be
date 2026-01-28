@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
+import java.util.ListResourceBundle;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -223,6 +225,24 @@ public class StoryService {
         return stories.map(this::convertToResponse);
     }
 
+    public List<StoryResponse> getStoriesByAuthor(Long authorId) {
+        return storyRepository.findByAuthorId(authorId)
+                .stream()
+                .map(story -> {
+                    StoryResponse res = new StoryResponse();
+                    res.setId(story.getId());
+                    res.setTitle(story.getTitle());
+
+                    Author author = story.getAuthor();
+                    if (author != null) {
+                        res.setAuthorId(author.getId());
+                        res.setAuthorName(author.getName());
+                    }
+
+                    return res;
+                })
+                .toList();
+    }
 
     // Convert Entity sang Response DTO
     private StoryResponse convertToResponse(Story story) {

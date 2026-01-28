@@ -16,6 +16,7 @@ public class StoryResponse {
     private Long id;
     private String title;
     private String authorName;
+    private Long authorId;
     private String description;
     private String image;
     private String status;
