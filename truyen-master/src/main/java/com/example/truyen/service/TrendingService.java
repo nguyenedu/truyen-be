@@ -177,9 +177,7 @@ public class TrendingService {
         }
     }
 
-    /**
-     * Lấy max views để normalize
-     */
+
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
 
