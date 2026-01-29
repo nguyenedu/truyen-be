@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,5 +19,9 @@ public class FavoriteResponse {
     private Long storyId;
     private String storyTitle;
     private String storyImage;
+    private String authorName;
+    private List<String> categories;
+    private Integer totalViews;
+    private Integer totalChapters;
     private LocalDateTime createdAt;
 }

@@ -94,13 +94,20 @@ public class FavoriteService {
 
     // Convert Entity sang Response DTO
     private FavoriteResponse convertToResponse(Favorite favorite) {
+        Story story = favorite.getStory();
         return FavoriteResponse.builder()
                 .id(favorite.getId())
                 .userId(favorite.getUser().getId())
                 .username(favorite.getUser().getUsername())
-                .storyId(favorite.getStory().getId())
-                .storyTitle(favorite.getStory().getTitle())
-                .storyImage(favorite.getStory().getImage())
+                .storyId(story.getId())
+                .storyTitle(story.getTitle())
+                .storyImage(story.getImage())
+                .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                .categories(story.getCategories() != null ? story.getCategories().stream()
+                        .map(cat -> cat.getName())
+                        .toList() : null)
+                .totalViews(story.getTotalViews())
+                .totalChapters(story.getTotalChapters())
                 .createdAt(favorite.getCreatedAt())
                 .build();
     }
