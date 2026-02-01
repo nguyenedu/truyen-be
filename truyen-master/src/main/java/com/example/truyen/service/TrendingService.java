@@ -56,9 +56,16 @@ public class TrendingService {
         double engagementScore = Math.min(engagement / 100.0 * 30.0, 30.0);
 
         // 4. Recency Score (10%)
-        long daysSinceUpdate = ChronoUnit.DAYS.between(
-                story.getUpdatedAt().toLocalDate(),
-                LocalDate.now());
+        long daysSinceUpdate = 0;
+        if (story.getUpdatedAt() != null) {
+            daysSinceUpdate = ChronoUnit.DAYS.between(
+                    story.getUpdatedAt().toLocalDate(),
+                    LocalDate.now());
+        } else if (story.getCreatedAt() != null) {
+            daysSinceUpdate = ChronoUnit.DAYS.between(
+                    story.getCreatedAt().toLocalDate(),
+                    LocalDate.now());
+        }
         double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
 
         return viewScore + ratingScore + engagementScore + recencyScore;
@@ -98,40 +105,64 @@ public class TrendingService {
         try {
             LocalDate today = LocalDate.now();
 
-            // 1. Lấy stories ONGOING và COMPLETED
-            List<Story> stories = storyRepository.findByStatusIn(
+            // 1. Lấy stories ONGOING và COMPLETED with eager fetch
+            List<Story> stories = storyRepository.findByStatusInWithDetails(
                     Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED));
 
             log.info("Calculating {} trending for {} stories", rankingType, stories.size());
 
+            if (stories.isEmpty()) {
+                log.warn("No stories found with status ONGOING or COMPLETED!");
+                return;
+            }
+
             // 2. Tính score
             List<StoryTrendingDTO> trendingList = stories.parallelStream()
                     .map(story -> {
-                        double score = calculateTrendingScore(story, days);
-                        Double avgRating = ratingRepository.getAverageRating(story.getId());
-                        Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
-                        Long commentCount = commentRepository.countByStoryId(story.getId());
+                        try {
+                            double score = calculateTrendingScore(story, days);
+                            Double avgRating = ratingRepository.getAverageRating(story.getId());
+                            Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
+                            Long commentCount = commentRepository.countByStoryId(story.getId());
 
-                        return StoryTrendingDTO.builder()
-                                .id(story.getId())
-                                .storyId(story.getId())
-                                .title(story.getTitle())
-                                .image(story.getImage())
-                                .totalViews(story.getTotalViews())
-                                .totalChapters(story.getTotalChapters())
-                                .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
-                                .categories(story.getCategories().stream()
-                                        .map(cat -> cat.getName())
-                                        .collect(Collectors.toList()))
-                                .averageRating(avgRating)
-                                .favoriteCount(favoriteCount)
-                                .commentCount(commentCount)
-                                .trendingScore(score)
-                                .build();
+                            // Categories are now eagerly fetched
+                            List<String> categoryNames = story.getCategories() != null
+                                    ? story.getCategories().stream()
+                                            .map(cat -> cat.getName())
+                                            .collect(Collectors.toList())
+                                    : new java.util.ArrayList<>();
+
+                            return StoryTrendingDTO.builder()
+                                    .id(story.getId())
+                                    .storyId(story.getId())
+                                    .title(story.getTitle())
+                                    .image(story.getImage())
+                                    .totalViews(story.getTotalViews())
+                                    .totalChapters(story.getTotalChapters())
+                                    .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                                    .categories(categoryNames)
+                                    .averageRating(avgRating)
+                                    .favoriteCount(favoriteCount)
+                                    .commentCount(commentCount)
+                                    .trendingScore(score)
+                                    .build();
+                        } catch (Exception e) {
+                            log.error("Error processing story {}: {}", story.getId(), e.getMessage());
+                            return null;
+                        }
                     })
+                    .filter(dto -> dto != null)
                     .sorted((a, b) -> Double.compare(b.getTrendingScore(), a.getTrendingScore()))
                     .limit(100)
                     .collect(Collectors.toList());
+
+            log.info("Calculated trending list size: {}", trendingList.size());
+
+            if (trendingList.isEmpty()) {
+                log.warn(
+                        "Trending list is empty after calculation! All stories may have been filtered out due to errors.");
+                return;
+            }
 
             // 3. Xóa rankings cũ
             rankingRepository.deleteByRankingTypeAndDate(rankingType, today);
@@ -154,6 +185,7 @@ public class TrendingService {
             }
 
             // 5. Cache vào Redis
+            log.info("Deleting old Redis cache for key: {}", redisKey);
             redisTemplate.delete(redisKey);
 
             if (!trendingList.isEmpty()) {
@@ -161,16 +193,27 @@ public class TrendingService {
                     trendingList.get(i).setRank(i + 1);
                 }
 
-                trendingList.forEach(dto -> redisTemplate.opsForList().rightPush(redisKey, dto));
+                log.info("Caching {} trending stories to Redis key: {}", trendingList.size(), redisKey);
 
-                Duration ttl = switch (rankingType) {
-                    case DAILY -> Duration.ofMinutes(30);
-                    case WEEKLY -> Duration.ofHours(2);
-                    case MONTHLY -> Duration.ofHours(6);
-                };
-                redisTemplate.expire(redisKey, ttl);
+                try {
+                    trendingList.forEach(dto -> {
+                        redisTemplate.opsForList().rightPush(redisKey, dto);
+                        log.debug("Cached story: {} - {}", dto.getRank(), dto.getTitle());
+                    });
 
-                log.info("Cached {} trending stories", trendingList.size());
+                    Duration ttl = switch (rankingType) {
+                        case DAILY -> Duration.ofMinutes(30);
+                        case WEEKLY -> Duration.ofHours(2);
+                        case MONTHLY -> Duration.ofHours(6);
+                    };
+                    redisTemplate.expire(redisKey, ttl);
+
+                    log.info("Successfully cached {} trending stories with TTL: {}", trendingList.size(), ttl);
+                } catch (Exception e) {
+                    log.error("Error caching to Redis: {}", e.getMessage(), e);
+                }
+            } else {
+                log.warn("Trending list is empty, nothing to cache");
             }
 
         } catch (Exception e) {
@@ -226,6 +269,18 @@ public class TrendingService {
                     Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
                     Long commentCount = commentRepository.countByStoryId(story.getId());
 
+                    // Safe category extraction
+                    List<String> categoryNames = new java.util.ArrayList<>();
+                    try {
+                        if (story.getCategories() != null && !story.getCategories().isEmpty()) {
+                            categoryNames = story.getCategories().stream()
+                                    .map(cat -> cat.getName())
+                                    .collect(Collectors.toList());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Could not load categories for story {}", story.getId());
+                    }
+
                     return StoryTrendingDTO.builder()
                             .id(story.getId())
                             .storyId(story.getId())
@@ -234,9 +289,7 @@ public class TrendingService {
                             .totalViews(story.getTotalViews())
                             .totalChapters(story.getTotalChapters())
                             .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
-                            .categories(story.getCategories().stream()
-                                    .map(cat -> cat.getName())
-                                    .collect(Collectors.toList()))
+                            .categories(categoryNames)
                             .averageRating(avgRating)
                             .favoriteCount(favoriteCount)
                             .commentCount(commentCount)
