@@ -34,7 +34,8 @@ public class TrendingService {
 
     /**
      * Tính trending score cho 1 story
-     * Score = ViewScore(40%) + RatingScore(20%) + EngagementScore(30%) + RecencyScore(10%)
+     * Score = ViewScore(40%) + RatingScore(20%) + EngagementScore(30%) +
+     * RecencyScore(10%)
      */
     public double calculateTrendingScore(Story story, int days) {
         // 1. View Score (40%)
@@ -57,13 +58,11 @@ public class TrendingService {
         // 4. Recency Score (10%)
         long daysSinceUpdate = ChronoUnit.DAYS.between(
                 story.getUpdatedAt().toLocalDate(),
-                LocalDate.now()
-        );
+                LocalDate.now());
         double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
 
         return viewScore + ratingScore + engagementScore + recencyScore;
     }
-
 
     @Scheduled(cron = "0 */30 * * * *")
     @Transactional
@@ -72,7 +71,6 @@ public class TrendingService {
         refreshTrending(Ranking.RankingType.DAILY, 1, RedisKeyConstants.TRENDING_DAILY);
         log.info("Finished refresh DAILY trending");
     }
-
 
     @Scheduled(cron = "0 0 */2 * * *")
     @Transactional
@@ -102,8 +100,7 @@ public class TrendingService {
 
             // 1. Lấy stories ONGOING và COMPLETED
             List<Story> stories = storyRepository.findByStatusIn(
-                    Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED)
-            );
+                    Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED));
 
             log.info("Calculating {} trending for {} stories", rankingType, stories.size());
 
@@ -117,9 +114,15 @@ public class TrendingService {
 
                         return StoryTrendingDTO.builder()
                                 .id(story.getId())
+                                .storyId(story.getId())
                                 .title(story.getTitle())
                                 .image(story.getImage())
                                 .totalViews(story.getTotalViews())
+                                .totalChapters(story.getTotalChapters())
+                                .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                                .categories(story.getCategories().stream()
+                                        .map(cat -> cat.getName())
+                                        .collect(Collectors.toList()))
                                 .averageRating(avgRating)
                                 .favoriteCount(favoriteCount)
                                 .commentCount(commentCount)
@@ -158,9 +161,7 @@ public class TrendingService {
                     trendingList.get(i).setRank(i + 1);
                 }
 
-                trendingList.forEach(dto ->
-                        redisTemplate.opsForList().rightPush(redisKey, dto)
-                );
+                trendingList.forEach(dto -> redisTemplate.opsForList().rightPush(redisKey, dto));
 
                 Duration ttl = switch (rankingType) {
                     case DAILY -> Duration.ofMinutes(30);
@@ -176,7 +177,6 @@ public class TrendingService {
             log.error("Error refreshing trending: {}", e.getMessage(), e);
         }
     }
-
 
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
@@ -228,9 +228,15 @@ public class TrendingService {
 
                     return StoryTrendingDTO.builder()
                             .id(story.getId())
+                            .storyId(story.getId())
                             .title(story.getTitle())
                             .image(story.getImage())
                             .totalViews(story.getTotalViews())
+                            .totalChapters(story.getTotalChapters())
+                            .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                            .categories(story.getCategories().stream()
+                                    .map(cat -> cat.getName())
+                                    .collect(Collectors.toList()))
                             .averageRating(avgRating)
                             .favoriteCount(favoriteCount)
                             .commentCount(commentCount)
