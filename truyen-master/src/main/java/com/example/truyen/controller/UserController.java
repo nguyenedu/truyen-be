@@ -1,8 +1,8 @@
 package com.example.truyen.controller;
 
-
 import com.example.truyen.dto.request.CreateUserRequest;
 import com.example.truyen.entity.User;
+import com.example.truyen.service.MinIoService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,19 +25,20 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final MinIoService minIoService;
 
-    //Lấy danh sách thông tin của tất cả User(Chỉ ADMIN và SUPER_ADMIN)
+    // Lấy danh sách thông tin của tất cả User(Chỉ ADMIN và SUPER_ADMIN)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Page<UserResponse> users = userService.getAllUsers(page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id,asc") String sort) {
+        Page<UserResponse> users = userService.getAllUsers(page, size, sort);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", users));
     }
 
-    //Lấy chi tiết thông tin của 1 User theo ID (chỉ ADMIN và SUPER_ADMIN)
+    // Lấy chi tiết thông tin của 1 User theo ID (chỉ ADMIN và SUPER_ADMIN)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
@@ -44,7 +46,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin người dùng thành công", user));
     }
 
-    //Lấy thông tin của User hiện tại
+    // Lấy thông tin của User hiện tại
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
@@ -52,37 +54,66 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin người dùng thành công", user));
     }
 
-    //Cập nhật thông tin của User
-    @PutMapping("/{id}")
+    // Cập nhật thông tin của User với avatar (multipart/form-data)
+    @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserWithAvatar(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateUserRequest request
-    ) {
+            @RequestParam(required = false) String fullname,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String password,
+            @RequestParam(required = false) MultipartFile avatar,
+            @RequestParam(required = false) Boolean isActive) {
+        // Upload avatar mới nếu có
+        String avatarUrl = null;
+        if (avatar != null && !avatar.isEmpty()) {
+            avatarUrl = minIoService.uploadFile(avatar, "avatars");
+        }
+
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setFullname(fullname);
+        request.setEmail(email);
+        request.setPhone(phone);
+        request.setPassword(password);
+        request.setAvatar(avatarUrl);
+        request.setIsActive(isActive);
+
         UserResponse user = userService.updateUser(id, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin người dùng thành công", user));
     }
 
-    //Thay đổi role của User (chỉ SUPER_ADMIN)
+    // Cập nhật thông tin của User (JSON - giữ lại endpoint cũ)
+    @PutMapping(value = "/{id}", consumes = { "application/json" })
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequest request) {
+        UserResponse user = userService.updateUser(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin người dùng thành công", user));
+    }
+
+    // Thay đổi role của User (chỉ SUPER_ADMIN)
     @PutMapping("/change-role")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> changeUserRole(
-            @Valid @RequestBody ChangeRoleRequest request
-    ) {
+            @Valid @RequestBody ChangeRoleRequest request) {
         UserResponse user = userService.changeUserRole(request);
         return ResponseEntity.ok(ApiResponse.success("Thay đổi vai trò người dùng thành công", user));
     }
 
-    //Ban, Unban User (Chỉ ADMIN, SUPER_ADMIN) (ADMIN được quyền ban user, SUPER_ADMIN được quyền làm hết)
-    @PutMapping({"/{id}/toggle-status"})
+    // Ban, Unban User (Chỉ ADMIN, SUPER_ADMIN) (ADMIN được quyền ban user,
+    // SUPER_ADMIN được quyền làm hết)
+    @PutMapping({ "/{id}/toggle-status" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(@PathVariable Long id) {
-            UserResponse user = userService.toggleUserStatus(id);
-            String statusMessage = user.getIsActive() ? "Ban" : "UnBan";
-            return ResponseEntity.ok(ApiResponse.success(statusMessage +"tài khoản thành công", user));
+        UserResponse user = userService.toggleUserStatus(id);
+        String statusMessage = user.getIsActive() ? "Ban" : "UnBan";
+        return ResponseEntity.ok(ApiResponse.success(statusMessage + "tài khoản thành công", user));
     }
 
-    //Xóa User (Chỉ ADMIN, SUPER_ADMIN) (SUPER ADMIN xóa được mọi thứ, ADMIN chỉ được quyền xóa user)
+    // Xóa User (Chỉ ADMIN, SUPER_ADMIN) (SUPER ADMIN xóa được mọi thứ, ADMIN chỉ
+    // được quyền xóa user)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
@@ -90,7 +121,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Xóa User thành công", null));
     }
 
-    //Thống kê số lượng user theo role (Chỉ ADMIN, SUPER_ADMIN)
+    // Thống kê số lượng user theo role (Chỉ ADMIN, SUPER_ADMIN)
     @GetMapping("/count-by-role/{role}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Long>> countUserByRole(@PathVariable String role) {
@@ -100,15 +131,46 @@ public class UserController {
 
     private final UserService UserService;
 
-    @PostMapping
+    // Tạo user mới với avatar (multipart/form-data)
+    @PostMapping(consumes = { "multipart/form-data" })
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ApiResponse<UserResponse> createUserWithAvatar(
+            @RequestParam String username,
+            @RequestParam String password,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String fullname,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) MultipartFile avatar,
+            @RequestParam(required = false) String role) {
+        // Upload avatar nếu có
+        String avatarUrl = null;
+        if (avatar != null && !avatar.isEmpty()) {
+            avatarUrl = minIoService.uploadFile(avatar, "avatars");
+        }
+
+        CreateUserRequest request = new CreateUserRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        request.setEmail(email);
+        request.setFullname(fullname);
+        request.setPhone(phone);
+        request.setAvatar(avatarUrl);
+        request.setRole(role);
+
+        return ApiResponse.success(
+                "Tạo người dùng thành công",
+                userService.createUser(request));
+    }
+
+    // Tạo user mới (JSON - giữ lại endpoint cũ)
+    @PostMapping(consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<UserResponse> createUser(
             @RequestBody CreateUserRequest request) {
 
         return ApiResponse.success(
                 "Tạo người dùng thành công",
-                userService.createUser(request)
-        );
+                userService.createUser(request));
     }
 
     // Tìm kiếm users (Chỉ ADMIN và SUPER_ADMIN)
@@ -119,8 +181,7 @@ public class UserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortField,
-            @RequestParam(defaultValue = "asc") String sortDir
-    ) {
+            @RequestParam(defaultValue = "asc") String sortDir) {
         Page<UserResponse> users = userService.searchUsers(keyword, page, size, sortField, sortDir);
         return ResponseEntity.ok(ApiResponse.success("Tìm kiếm người dùng thành công", users));
     }
