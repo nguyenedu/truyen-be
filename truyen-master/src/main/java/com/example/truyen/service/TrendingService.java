@@ -38,37 +38,42 @@ public class TrendingService {
      * RecencyScore(10%)
      */
     public double calculateTrendingScore(Story story, int days) {
-        // 1. View Score (40%)
-        long recentViews = viewService.getRecentViews(story.getId(), days);
-        Long maxViews = getMaxRecentViews(days);
-        double viewScore = maxViews > 0 ? (recentViews * 40.0 / maxViews) : 0;
+        try {
+            // 1. View Score (40%)
+            long recentViews = viewService.getRecentViews(story.getId(), days);
+            Long maxViews = getMaxRecentViews(days);
+            double viewScore = maxViews > 0 ? (recentViews * 40.0 / maxViews) : 0;
 
-        // 2. Rating Score (20%)
-        Double avgRating = ratingRepository.getAverageRating(story.getId());
-        double ratingScore = avgRating != null ? (avgRating / 5.0 * 20.0) : 0;
+            // 2. Rating Score (20%)
+            Double avgRating = ratingRepository.getAverageRating(story.getId());
+            double ratingScore = avgRating != null ? (avgRating / 5.0 * 20.0) : 0;
 
-        // 3. Engagement Score (30%)
-        Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
-        Long commentCount = commentRepository.countByStoryId(story.getId());
-        Long ratingCount = ratingRepository.countByStoryId(story.getId());
+            // 3. Engagement Score (30%)
+            Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
+            Long commentCount = commentRepository.countByStoryId(story.getId());
+            Long ratingCount = ratingRepository.countByStoryId(story.getId());
 
-        double engagement = (favoriteCount * 3) + (commentCount * 2) + (ratingCount * 2);
-        double engagementScore = Math.min(engagement / 100.0 * 30.0, 30.0);
+            double engagement = (favoriteCount * 3) + (commentCount * 2) + (ratingCount * 2);
+            double engagementScore = Math.min(engagement / 100.0 * 30.0, 30.0);
 
-        // 4. Recency Score (10%)
-        long daysSinceUpdate = 0;
-        if (story.getUpdatedAt() != null) {
-            daysSinceUpdate = ChronoUnit.DAYS.between(
-                    story.getUpdatedAt().toLocalDate(),
-                    LocalDate.now());
-        } else if (story.getCreatedAt() != null) {
-            daysSinceUpdate = ChronoUnit.DAYS.between(
-                    story.getCreatedAt().toLocalDate(),
-                    LocalDate.now());
+            // 4. Recency Score (10%)
+            long daysSinceUpdate = 0;
+            if (story.getUpdatedAt() != null) {
+                daysSinceUpdate = ChronoUnit.DAYS.between(
+                        story.getUpdatedAt().toLocalDate(),
+                        LocalDate.now());
+            } else if (story.getCreatedAt() != null) {
+                daysSinceUpdate = ChronoUnit.DAYS.between(
+                        story.getCreatedAt().toLocalDate(),
+                        LocalDate.now());
+            }
+            double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
+
+            return viewScore + ratingScore + engagementScore + recencyScore;
+        } catch (Exception e) {
+            log.error("Error calculating trending score for story {}: {}", story.getId(), e.getMessage());
+            return 0;
         }
-        double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
-
-        return viewScore + ratingScore + engagementScore + recencyScore;
     }
 
     @Scheduled(cron = "0 */30 * * * *")
@@ -128,8 +133,8 @@ public class TrendingService {
                             // Categories are now eagerly fetched
                             List<String> categoryNames = story.getCategories() != null
                                     ? story.getCategories().stream()
-                                            .map(cat -> cat.getName())
-                                            .collect(Collectors.toList())
+                                    .map(cat -> cat.getName())
+                                    .collect(Collectors.toList())
                                     : new java.util.ArrayList<>();
 
                             return StoryTrendingDTO.builder()
@@ -185,48 +190,71 @@ public class TrendingService {
             }
 
             // 5. Cache vào Redis
-            log.info("Deleting old Redis cache for key: {}", redisKey);
-            redisTemplate.delete(redisKey);
-
-            if (!trendingList.isEmpty()) {
-                for (int i = 0; i < trendingList.size(); i++) {
-                    trendingList.get(i).setRank(i + 1);
-                }
-
-                log.info("Caching {} trending stories to Redis key: {}", trendingList.size(), redisKey);
-
-                try {
-                    trendingList.forEach(dto -> {
-                        redisTemplate.opsForList().rightPush(redisKey, dto);
-                        log.debug("Cached story: {} - {}", dto.getRank(), dto.getTitle());
-                    });
-
-                    Duration ttl = switch (rankingType) {
-                        case DAILY -> Duration.ofMinutes(30);
-                        case WEEKLY -> Duration.ofHours(2);
-                        case MONTHLY -> Duration.ofHours(6);
-                    };
-                    redisTemplate.expire(redisKey, ttl);
-
-                    log.info("Successfully cached {} trending stories with TTL: {}", trendingList.size(), ttl);
-                } catch (Exception e) {
-                    log.error("Error caching to Redis: {}", e.getMessage(), e);
-                }
-            } else {
-                log.warn("Trending list is empty, nothing to cache");
-            }
+            cacheToRedis(redisKey, trendingList, rankingType);
 
         } catch (Exception e) {
             log.error("Error refreshing trending: {}", e.getMessage(), e);
         }
     }
 
+    /**
+     * Improved Redis caching with error handling
+     */
+    private void cacheToRedis(String redisKey, List<StoryTrendingDTO> trendingList, Ranking.RankingType rankingType) {
+        try {
+            log.info("Deleting old Redis cache for key: {}", redisKey);
+
+            // Delete old cache
+            Boolean deleted = redisTemplate.delete(redisKey);
+            log.debug("Old cache deleted: {}", deleted);
+
+            if (!trendingList.isEmpty()) {
+                // Set rank numbers
+                for (int i = 0; i < trendingList.size(); i++) {
+                    trendingList.get(i).setRank(i + 1);
+                }
+
+                log.info("Caching {} trending stories to Redis key: {}", trendingList.size(), redisKey);
+
+                // Push each item to Redis list
+                for (StoryTrendingDTO dto : trendingList) {
+                    try {
+                        redisTemplate.opsForList().rightPush(redisKey, dto);
+                        log.debug("Cached story: {} - {}", dto.getRank(), dto.getTitle());
+                    } catch (Exception e) {
+                        log.error("Failed to cache story {}: {}", dto.getStoryId(), e.getMessage());
+                    }
+                }
+
+                // Set TTL
+                Duration ttl = switch (rankingType) {
+                    case DAILY -> Duration.ofMinutes(30);
+                    case WEEKLY -> Duration.ofHours(2);
+                    case MONTHLY -> Duration.ofHours(6);
+                };
+
+                Boolean expireSet = redisTemplate.expire(redisKey, ttl);
+                log.info("Successfully cached {} trending stories with TTL: {} (expire set: {})",
+                        trendingList.size(), ttl, expireSet);
+            } else {
+                log.warn("Trending list is empty, nothing to cache");
+            }
+
+        } catch (Exception e) {
+            log.error("Error caching to Redis key {}: {}", redisKey, e.getMessage(), e);
+        }
+    }
+
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
 
-        Object cached = redisTemplate.opsForValue().get(key);
-        if (cached != null) {
-            return Long.parseLong(cached.toString());
+        try {
+            Object cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                return Long.parseLong(cached.toString());
+            }
+        } catch (Exception e) {
+            log.warn("Error reading max views from cache: {}", e.getMessage());
         }
 
         List<Story> stories = storyRepository.findAll();
@@ -235,13 +263,20 @@ public class TrendingService {
                 .max()
                 .orElse(1L);
 
-        redisTemplate.opsForValue().set(key, max, Duration.ofMinutes(30));
+        try {
+            redisTemplate.opsForValue().set(key, max, Duration.ofMinutes(30));
+        } catch (Exception e) {
+            log.warn("Error caching max views: {}", e.getMessage());
+        }
+
         return max;
     }
 
     /**
      * API: Lấy trending
+     * FIXED: Added @Transactional(readOnly = true) to keep session open for lazy loading
      */
+    @Transactional(readOnly = true)
     public List<StoryTrendingDTO> getTrending(Ranking.RankingType rankingType, int limit) {
         String redisKey = switch (rankingType) {
             case DAILY -> RedisKeyConstants.TRENDING_DAILY;
@@ -249,59 +284,91 @@ public class TrendingService {
             case MONTHLY -> RedisKeyConstants.TRENDING_MONTHLY;
         };
 
-        List<Object> cached = redisTemplate.opsForList().range(redisKey, 0, limit - 1);
+        try {
+            List<Object> cached = redisTemplate.opsForList().range(redisKey, 0, limit - 1);
 
-        if (cached != null && !cached.isEmpty()) {
-            return cached.stream()
-                    .map(obj -> (StoryTrendingDTO) obj)
-                    .collect(Collectors.toList());
+            if (cached != null && !cached.isEmpty()) {
+                log.info("Cache HIT for {} trending, size: {}", rankingType, cached.size());
+                return cached.stream()
+                        .map(obj -> (StoryTrendingDTO) obj)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.error("Error reading trending from Redis: {}", e.getMessage());
+            // Fallback to DB
         }
 
         // Cache miss → Get from DB
-        log.warn("Cache MISS, loading from DB");
-        List<Ranking> rankings = rankingRepository.findLatestByRankingType(rankingType);
+        log.warn("Cache MISS for {}, loading from DB", rankingType);
+        return getTrendingFromDB(rankingType, limit);
+    }
 
-        return rankings.stream()
-                .limit(limit)
-                .map(ranking -> {
-                    Story story = ranking.getStory();
-                    Double avgRating = ratingRepository.getAverageRating(story.getId());
-                    Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
-                    Long commentCount = commentRepository.countByStoryId(story.getId());
+    /**
+     * Fallback: Get trending from database
+     * IMPORTANT: This method is called within @Transactional context from getTrending()
+     */
+    private List<StoryTrendingDTO> getTrendingFromDB(Ranking.RankingType rankingType, int limit) {
+        try {
+            // Rankings now have Story, Author, and Categories eagerly fetched via JOIN FETCH
+            List<Ranking> rankings = rankingRepository.findLatestByRankingType(rankingType);
 
-                    // Safe category extraction
-                    List<String> categoryNames = new java.util.ArrayList<>();
-                    try {
-                        if (story.getCategories() != null && !story.getCategories().isEmpty()) {
-                            categoryNames = story.getCategories().stream()
-                                    .map(cat -> cat.getName())
-                                    .collect(Collectors.toList());
+            log.info("Loaded {} rankings from DB for {}", rankings.size(), rankingType);
+
+            return rankings.stream()
+                    .limit(limit)
+                    .map(ranking -> {
+                        try {
+                            Story story = ranking.getStory();
+
+                            // These are now safe to access because of @Transactional and JOIN FETCH
+                            Double avgRating = ratingRepository.getAverageRating(story.getId());
+                            Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
+                            Long commentCount = commentRepository.countByStoryId(story.getId());
+
+                            // Categories and Author are eagerly loaded, safe to access
+                            List<String> categoryNames = new java.util.ArrayList<>();
+                            if (story.getCategories() != null) {
+                                categoryNames = story.getCategories().stream()
+                                        .map(cat -> cat.getName())
+                                        .collect(Collectors.toList());
+                            }
+
+                            String authorName = null;
+                            if (story.getAuthor() != null) {
+                                authorName = story.getAuthor().getName();
+                            }
+
+                            return StoryTrendingDTO.builder()
+                                    .id(story.getId())
+                                    .storyId(story.getId())
+                                    .title(story.getTitle())
+                                    .image(story.getImage())
+                                    .totalViews(story.getTotalViews())
+                                    .totalChapters(story.getTotalChapters())
+                                    .authorName(authorName)
+                                    .categories(categoryNames)
+                                    .averageRating(avgRating)
+                                    .favoriteCount(favoriteCount)
+                                    .commentCount(commentCount)
+                                    .rank(ranking.getRankPosition())
+                                    .build();
+                        } catch (Exception e) {
+                            log.error("Error mapping ranking {} to DTO: {}", ranking.getId(), e.getMessage(), e);
+                            return null;
                         }
-                    } catch (Exception e) {
-                        log.warn("Could not load categories for story {}", story.getId());
-                    }
-
-                    return StoryTrendingDTO.builder()
-                            .id(story.getId())
-                            .storyId(story.getId())
-                            .title(story.getTitle())
-                            .image(story.getImage())
-                            .totalViews(story.getTotalViews())
-                            .totalChapters(story.getTotalChapters())
-                            .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
-                            .categories(categoryNames)
-                            .averageRating(avgRating)
-                            .favoriteCount(favoriteCount)
-                            .commentCount(commentCount)
-                            .rank(ranking.getRankPosition())
-                            .build();
-                })
-                .collect(Collectors.toList());
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error getting trending from DB: {}", e.getMessage(), e);
+            return List.of(); // Return empty list instead of null
+        }
     }
 
     /**
      * Manual refresh
      */
+    @Transactional
     public void manualRefresh(Ranking.RankingType rankingType) {
         switch (rankingType) {
             case DAILY -> refreshTrending(Ranking.RankingType.DAILY, 1, RedisKeyConstants.TRENDING_DAILY);

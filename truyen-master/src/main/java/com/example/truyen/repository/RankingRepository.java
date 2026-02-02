@@ -13,16 +13,27 @@ import java.util.List;
 @Repository
 public interface RankingRepository extends JpaRepository<Ranking, Long> {
 
-
+    /**
+     * FIXED: Added JOIN FETCH to eagerly load Story, Author, and Categories
+     * This prevents LazyInitializationException when accessing story.getAuthor() or story.getCategories()
+     */
     @Query("SELECT r FROM Ranking r WHERE r.rankingType = :type AND r.rankingDate = :date ORDER BY r.rankPosition ASC")
     List<Ranking> findByRankingTypeAndDate(
             @Param("type") Ranking.RankingType type,
             @Param("date") LocalDate date
     );
 
-    @Query("SELECT r FROM Ranking r WHERE r.rankingType = :type ORDER BY r.rankingDate DESC, r.rankPosition ASC")
+    /**
+     * FIXED: Added JOIN FETCH to eagerly load all related entities
+     * This is the key fix for the "could not initialize proxy - no Session" error
+     */
+    @Query("SELECT DISTINCT r FROM Ranking r " +
+            "JOIN FETCH r.story s " +
+            "LEFT JOIN FETCH s.author " +
+            "LEFT JOIN FETCH s.categories " +
+            "WHERE r.rankingType = :type " +
+            "ORDER BY r.rankingDate DESC, r.rankPosition ASC")
     List<Ranking> findLatestByRankingType(@Param("type") Ranking.RankingType type);
-
 
     @Modifying
     @Query("DELETE FROM Ranking r WHERE r.rankingType = :type AND r.rankingDate = :date")

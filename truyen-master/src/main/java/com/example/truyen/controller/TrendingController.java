@@ -24,6 +24,7 @@ import java.util.List;
 @RequestMapping("/api/trending")
 @RequiredArgsConstructor
 @Slf4j
+@CrossOrigin(origins = {"http://localhost:5174", "http://localhost:5175", "http://localhost:5176"})
 public class TrendingController {
 
     private final TrendingService trendingService;
@@ -33,16 +34,52 @@ public class TrendingController {
     private final FavoriteRepository favoriteRepository;
     private final CommentRepository commentRepository;
 
+    /**
+     * GET /api/trending?t=DAILY&limit=12
+     * GET /api/trending?type=DAILY&limit=12
+     *
+     * Support cả 2 format: 't' và 'type'
+     */
     @GetMapping
     public ResponseEntity<List<StoryTrendingDTO>> getTrending(
-            @RequestParam(defaultValue = "DAILY") Ranking.RankingType type,
+            @RequestParam(value = "t", required = false) String tParam,
+            @RequestParam(value = "type", required = false) String typeParam,
             @RequestParam(defaultValue = "20") int limit) {
 
-        log.info("Getting trending: type={}, limit={}", type, limit);
+        try {
+            // Xử lý parameter 't' hoặc 'type'
+            String typeString = tParam != null ? tParam : typeParam;
 
-        List<StoryTrendingDTO> trending = trendingService.getTrending(type, limit);
+            // Default to DAILY if no param provided
+            if (typeString == null || typeString.isEmpty()) {
+                typeString = "DAILY";
+            }
 
-        return ResponseEntity.ok(trending);
+            // Remove prefix "e-" if exists (from frontend: t=e-WEEKLY)
+            typeString = typeString.replace("e-", "").toUpperCase();
+
+            // Parse to enum
+            Ranking.RankingType type;
+            try {
+                type = Ranking.RankingType.valueOf(typeString);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid ranking type: {}, defaulting to DAILY", typeString);
+                type = Ranking.RankingType.DAILY;
+            }
+
+            log.info("Getting trending: type={}, limit={}", type, limit);
+
+            List<StoryTrendingDTO> trending = trendingService.getTrending(type, limit);
+
+            log.info("Successfully retrieved {} trending stories", trending.size());
+
+            return ResponseEntity.ok(trending);
+
+        } catch (Exception e) {
+            log.error("Error getting trending stories", e);
+            // Return empty list instead of error to prevent frontend crash
+            return ResponseEntity.ok(List.of());
+        }
     }
 
     /**
@@ -54,25 +91,33 @@ public class TrendingController {
             @RequestParam(required = false) Long userId,
             HttpServletRequest request) {
 
-        String ipAddress = request.getRemoteAddr();
-        viewService.trackView(id, userId, ipAddress);
-
-        return ResponseEntity.ok("View tracked successfully");
+        try {
+            String ipAddress = request.getRemoteAddr();
+            viewService.trackView(id, userId, ipAddress);
+            return ResponseEntity.ok("View tracked successfully");
+        } catch (Exception e) {
+            log.error("Error tracking view for story {}", id, e);
+            return ResponseEntity.ok("View tracking failed");
+        }
     }
-
 
     @PostMapping("/track")
     public ResponseEntity<String> trackView(
             @Valid @RequestBody TrackViewRequest requestDto,
             HttpServletRequest request) {
 
-        String ipAddress = request.getRemoteAddr();
-        viewService.trackView(requestDto.getStoryId(), requestDto.getUserId(), ipAddress);
+        try {
+            String ipAddress = request.getRemoteAddr();
+            viewService.trackView(requestDto.getStoryId(), requestDto.getUserId(), ipAddress);
 
-        log.info("Tracked view for story {} by user {}",
-                requestDto.getStoryId(), requestDto.getUserId());
+            log.info("Tracked view for story {} by user {}",
+                    requestDto.getStoryId(), requestDto.getUserId());
 
-        return ResponseEntity.ok("View tracked successfully");
+            return ResponseEntity.ok("View tracked successfully");
+        } catch (Exception e) {
+            log.error("Error tracking view", e);
+            return ResponseEntity.ok("View tracking failed");
+        }
     }
 
     /**
@@ -83,10 +128,14 @@ public class TrendingController {
     public ResponseEntity<String> manualRefresh(
             @RequestParam(defaultValue = "DAILY") Ranking.RankingType type) {
 
-        log.info("Manual refresh triggered for {}", type);
-        trendingService.manualRefresh(type);
-
-        return ResponseEntity.ok("Trending refreshed for " + type);
+        try {
+            log.info("Manual refresh triggered for {}", type);
+            trendingService.manualRefresh(type);
+            return ResponseEntity.ok("Trending refreshed for " + type);
+        } catch (Exception e) {
+            log.error("Error refreshing trending for {}", type, e);
+            return ResponseEntity.status(500).body("Refresh failed: " + e.getMessage());
+        }
     }
 
     /**
@@ -94,25 +143,30 @@ public class TrendingController {
      * Xem stats chi tiết của 1 truyện
      */
     @GetMapping("/stats/{storyId}")
-    public ResponseEntity<StoryStatsResponse> getStoryStats(@PathVariable Long storyId) {
+    public ResponseEntity<?> getStoryStats(@PathVariable Long storyId) {
 
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new RuntimeException("Story not found"));
+        try {
+            Story story = storyRepository.findById(storyId)
+                    .orElseThrow(() -> new RuntimeException("Story not found"));
 
-        StoryStatsResponse stats = StoryStatsResponse.builder()
-                .storyId(storyId)
-                .title(story.getTitle())
-                .image(story.getImage())
-                .viewsToday(viewService.getViewsToday(storyId))
-                .uniqueViewersToday(viewService.getUniqueViewersToday(storyId))
-                .views7Days(viewService.getRecentViews(storyId, 7))
-                .views30Days(viewService.getRecentViews(storyId, 30))
-                .totalViews(story.getTotalViews())
-                .averageRating(ratingRepository.getAverageRating(storyId))
-                .favoriteCount(favoriteRepository.countByStoryId(storyId))
-                .commentCount(commentRepository.countByStoryId(storyId))
-                .build();
+            StoryStatsResponse stats = StoryStatsResponse.builder()
+                    .storyId(storyId)
+                    .title(story.getTitle())
+                    .image(story.getImage())
+                    .viewsToday(viewService.getViewsToday(storyId))
+                    .uniqueViewersToday(viewService.getUniqueViewersToday(storyId))
+                    .views7Days(viewService.getRecentViews(storyId, 7))
+                    .views30Days(viewService.getRecentViews(storyId, 30))
+                    .totalViews(story.getTotalViews())
+                    .averageRating(ratingRepository.getAverageRating(storyId))
+                    .favoriteCount(favoriteRepository.countByStoryId(storyId))
+                    .commentCount(commentRepository.countByStoryId(storyId))
+                    .build();
 
-        return ResponseEntity.ok(stats);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error getting stats for story {}", storyId, e);
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
     }
 }
