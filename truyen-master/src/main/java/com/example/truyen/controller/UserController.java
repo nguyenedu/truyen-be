@@ -34,7 +34,7 @@ public class UserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id,asc") String sort) {
-        Page<UserResponse> users = userService.getAllUsers(page, size, sort);
+        Page<UserResponse> users = userService.getAllUsers(page, size);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách người dùng thành công", users));
     }
 
