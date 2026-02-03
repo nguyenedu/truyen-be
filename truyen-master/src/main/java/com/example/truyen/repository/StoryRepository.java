@@ -35,14 +35,16 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
 
         List<Story> findByAuthorId(Long authorId);
 
-        @Query("SELECT s FROM Story s WHERE " +
-                        "(:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+        @Query("SELECT DISTINCT s FROM Story s " +
+                        "LEFT JOIN s.categories c " +
+                        "WHERE (:keyword IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
                         "(:authorId IS NULL OR s.author.id = :authorId) AND " +
                         "(:status IS NULL OR s.status = :status) AND " +
                         "(:minChapters IS NULL OR s.totalChapters >= :minChapters) AND " +
                         "(:maxChapters IS NULL OR s.totalChapters <= :maxChapters) AND " +
                         "(:startDate IS NULL OR s.createdAt >= :startDate) AND " +
-                        "(:endDate IS NULL OR s.createdAt <= :endDate)")
+                        "(:endDate IS NULL OR s.createdAt <= :endDate) AND " +
+                        "(:categoryIds IS NULL OR c.id IN :categoryIds)")
         Page<Story> filterStories(
                         @Param("keyword") String keyword,
                         @Param("authorId") Long authorId,
@@ -51,6 +53,7 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
                         @Param("maxChapters") Integer maxChapters,
                         @Param("startDate") LocalDateTime startDate,
                         @Param("endDate") LocalDateTime endDate,
+                        @Param("categoryIds") List<Long> categoryIds,
                         Pageable pageable);
 
         List<Story> findByStatusIn(List<Story.Status> statuses);

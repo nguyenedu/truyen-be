@@ -244,12 +244,13 @@ public class StoryController {
                         @RequestParam(required = false) Integer maxChapters,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+                        @RequestParam(required = false) List<Long> categoryIds,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id,desc") String sort) {
                 Page<StoryResponse> stories = storyService.filterStories(
                                 keyword, authorId, status, minChapters, maxChapters,
-                                startDate, endDate, page, size, sort);
+                                startDate, endDate, categoryIds, page, size, sort);
                 return ResponseEntity.ok(ApiResponse.success("Lấy danh sách truyện đã lọc thành công", stories));
         }
 }

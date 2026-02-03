@@ -194,6 +194,7 @@ public class StoryService {
             Integer maxChapters,
             LocalDateTime startDate,
             LocalDateTime endDate,
+            List<Long> categoryIds,
             int page,
             int size,
             String sort) {
@@ -221,6 +222,7 @@ public class StoryService {
                 maxChapters,
                 startDate,
                 endDate,
+                categoryIds,
                 pageable).map(this::convertToResponse);
     }
 
