@@ -229,19 +229,11 @@ public class StoryService {
     /**
      * Lấy danh sách tất cả truyện của một tác giả cụ thể.
      */
+    @Transactional(readOnly = true)
     public List<StoryResponse> getStoriesByAuthor(Long authorId) {
         return storyRepository.findByAuthorId(authorId)
                 .stream()
-                .map(story -> {
-                    StoryResponse res = new StoryResponse();
-                    res.setId(story.getId());
-                    res.setTitle(story.getTitle());
-                    if (story.getAuthor() != null) {
-                        res.setAuthorId(story.getAuthor().getId());
-                        res.setAuthorName(story.getAuthor().getName());
-                    }
-                    return res;
-                })
+                .map(this::convertToResponse)
                 .toList();
     }
 
@@ -257,6 +249,7 @@ public class StoryService {
                 .id(story.getId())
                 .title(story.getTitle())
                 .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                .authorId(story.getAuthor() != null ? story.getAuthor().getId() : null)
                 .description(story.getDescription())
                 .image(story.getImage())
                 .status(story.getStatus().name())

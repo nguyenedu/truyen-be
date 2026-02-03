@@ -23,6 +23,7 @@ public class StoryTrendingDTO implements Serializable {
     private Integer totalViews;
     private Integer totalChapters;
     private String authorName;
+    private Long authorId;
     private List<String> categories;
     private Double averageRating;
     private Long favoriteCount;

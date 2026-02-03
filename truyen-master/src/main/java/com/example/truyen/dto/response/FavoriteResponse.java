@@ -20,6 +20,7 @@ public class FavoriteResponse {
     private String storyTitle;
     private String storyImage;
     private String authorName;
+    private Long authorId;
     private List<String> categories;
     private Integer totalViews;
     private Integer totalChapters;

@@ -109,6 +109,7 @@ public class FavoriteService {
                 .storyTitle(story.getTitle())
                 .storyImage(story.getImage())
                 .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                .authorId(story.getAuthor() != null ? story.getAuthor().getId() : null)
                 .categories(story.getCategories() != null ? story.getCategories().stream()
                         .map(Category::getName)
                         .toList() : null)
