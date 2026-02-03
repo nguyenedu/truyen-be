@@ -24,7 +24,7 @@ public class ActivityLogService {
     private final ObjectMapper objectMapper;
 
     /**
-     * Save activity log asynchronously in a new transaction.
+     * Lưu nhật ký hoạt động bất đồng bộ trong một giao dịch mới.
      */
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -38,7 +38,7 @@ public class ActivityLogService {
     }
 
     /**
-     * Save activity log synchronously in a new transaction.
+     * Lưu nhật ký hoạt động đồng bộ trong một giao dịch mới.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveLogSync(ActivityLog activityLog) {
@@ -50,7 +50,7 @@ public class ActivityLogService {
     }
 
     /**
-     * Create an ActivityLog entity from provided data.
+     * Tạo thực thể nhật ký hoạt động từ dữ liệu cung cấp.
      */
     public ActivityLog createLog(Long userId, String action, String tableName,
             Long recordId, Object data, String ipAddress) {
@@ -68,7 +68,7 @@ public class ActivityLogService {
     }
 
     /**
-     * Convert an object to its JSON string representation.
+     * Chuyển đổi đối tượng sang định dạng chuỗi JSON.
      */
     public String convertObjectToJson(Object obj) {
         if (obj == null) {

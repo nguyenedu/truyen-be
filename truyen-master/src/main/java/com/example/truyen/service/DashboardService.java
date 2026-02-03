@@ -30,7 +30,8 @@ public class DashboardService {
     private final ActivityLogRepository activityLogRepository;
 
     /**
-     * Retrieve aggregated dashboard statistics for a given period.
+     * Lấy số liệu thống kê tổng hợp bảng điều khiển cho một khoảng thời gian nhất
+     * định.
      */
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats(String period) {
@@ -254,13 +255,13 @@ public class DashboardService {
         long days = duration.toDays();
 
         if (minutes < 1)
-            return "Just now";
+            return "Vừa xong";
         if (minutes < 60)
-            return minutes + " minutes ago";
+            return minutes + " phút trước";
         if (hours < 24)
-            return hours + " hours ago";
+            return hours + " giờ trước";
         if (days < 30)
-            return days + " days ago";
+            return days + " ngày trước";
         return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
 }

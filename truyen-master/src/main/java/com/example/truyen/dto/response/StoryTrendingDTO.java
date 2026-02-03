@@ -17,7 +17,7 @@ public class StoryTrendingDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long id;
-    private Long storyId; // For frontend compatibility
+    private Long storyId;
     private String title;
     private String image;
     private Integer totalViews;

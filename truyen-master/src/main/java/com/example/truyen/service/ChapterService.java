@@ -23,7 +23,8 @@ public class ChapterService {
     private final StoryRepository storyRepository;
 
     /**
-     * Retrieve all chapters for a specific story, ordered by chapter number.
+     * Lấy danh sách tất cả các chương của một truyện cụ thể, sắp xếp theo số
+     * chương.
      */
     @Transactional(readOnly = true)
     public List<ChapterResponse> getChaptersByStoryId(Long storyId) {
@@ -36,7 +37,7 @@ public class ChapterService {
     }
 
     /**
-     * Retrieve chapter details by ID and increment view count.
+     * Lấy chi tiết chương theo ID và tăng lượt xem.
      */
     @Transactional
     public ChapterResponse getChapterById(Long id) {
@@ -50,14 +51,13 @@ public class ChapterService {
     }
 
     /**
-     * Retrieve chapter details by story ID and chapter number, incrementing view
-     * count.
+     * Lấy chi tiết chương theo ID truyện và số chương, tăng lượt xem.
      */
     @Transactional
     public ChapterResponse getChapterByStoryAndNumber(Long storyId, Integer chapterNumber) {
         Chapter chapter = chapterRepository.findByStoryIdAndChapterNumber(storyId, chapterNumber)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Chapter " + chapterNumber + " for story ID " + storyId + " not found"));
+                        "Không tìm thấy chương " + chapterNumber + " cho truyện có ID " + storyId));
 
         chapter.setViews(chapter.getViews() + 1);
         chapterRepository.save(chapter);
@@ -66,7 +66,7 @@ public class ChapterService {
     }
 
     /**
-     * Create a new chapter and update the story's total chapter count.
+     * Tạo chương mới và cập nhật tổng số chương của truyện.
      */
     @Transactional
     public ChapterResponse createChapter(ChapterRequest request) {
@@ -74,7 +74,7 @@ public class ChapterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", request.getStoryId()));
 
         if (chapterRepository.existsByStoryIdAndChapterNumber(request.getStoryId(), request.getChapterNumber())) {
-            throw new BadRequestException("Chapter " + request.getChapterNumber() + " already exists");
+            throw new BadRequestException("Chương " + request.getChapterNumber() + " đã tồn tại");
         }
 
         Chapter chapter = Chapter.builder()
@@ -95,7 +95,7 @@ public class ChapterService {
     }
 
     /**
-     * Update an existing chapter's details.
+     * Cập nhật thông tin chương hiện có.
      */
     @Transactional
     public ChapterResponse updateChapter(Long id, ChapterRequest request) {
@@ -119,7 +119,7 @@ public class ChapterService {
     }
 
     /**
-     * Delete a chapter and update the story's total chapter count.
+     * Xóa chương và cập nhật tổng số chương của truyện.
      */
     @Transactional
     public void deleteChapter(Long id) {
@@ -137,7 +137,7 @@ public class ChapterService {
     }
 
     /**
-     * Map Chapter entity to ChapterResponse DTO.
+     * Chuyển đổi Chapter sang ChapterResponse DTO.
      */
     private ChapterResponse convertToResponse(Chapter chapter) {
         return ChapterResponse.builder()

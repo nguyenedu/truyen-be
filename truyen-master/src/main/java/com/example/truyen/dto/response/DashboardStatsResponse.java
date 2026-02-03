@@ -13,31 +13,31 @@ import java.util.List;
 @Builder
 public class DashboardStatsResponse {
 
-    // Thống kê tổng quan
+
     private Long totalStories;
     private Long totalAuthors;
     private Long totalUsers;
     private Long totalViews;
 
-    // Thống kê so sánh với kỳ trước
+
     private StatsComparison storiesComparison;
     private StatsComparison authorsComparison;
     private StatsComparison usersComparison;
     private StatsComparison viewsComparison;
 
-    // Top truyện nhiều view nhất
+
     private List<TopStoryDTO> topStoriesByViews;
 
-    // Top tác giả nhiều truyện nhất
+
     private List<TopAuthorDTO> topAuthorsByStories;
 
-    // Biểu đồ truyện mới theo ngày
+
     private List<ChartDataPoint> newStoriesChart;
 
-    // Biểu đồ user đăng ký mới theo ngày
+
     private List<ChartDataPoint> newUsersChart;
 
-    // Recent activities
+
     private List<RecentActivityDTO> recentActivities;
 
     @Data

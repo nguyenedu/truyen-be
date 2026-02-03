@@ -27,7 +27,7 @@ public class FavoriteService {
     private final StoryRepository storyRepository;
 
     /**
-     * Retrieve the current user's favorite stories with pagination.
+     * Lấy danh sách truyện yêu thích của người dùng hiện tại với phân trang.
      */
     @Transactional(readOnly = true)
     public Page<FavoriteResponse> getMyFavorites(int page, int size) {
@@ -37,7 +37,7 @@ public class FavoriteService {
     }
 
     /**
-     * Check if a story is favorited by the current user.
+     * Kiểm tra xem truyện có được người dùng hiện tại yêu thích hay không.
      */
     @Transactional(readOnly = true)
     public Boolean isFavorite(Long storyId) {
@@ -46,7 +46,7 @@ public class FavoriteService {
     }
 
     /**
-     * Add a story to the current user's favorite list.
+     * Thêm truyện vào danh sách yêu thích của người dùng hiện tại.
      */
     @Transactional
     public FavoriteResponse addFavorite(Long storyId) {
@@ -55,7 +55,7 @@ public class FavoriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", storyId));
 
         if (favoriteRepository.existsByUserIdAndStoryId(currentUser.getId(), storyId)) {
-            throw new BadRequestException("Story is already in your favorites list");
+            throw new BadRequestException("Truyện đã có trong danh sách yêu thích của bạn");
         }
 
         Favorite favorite = Favorite.builder()
@@ -67,19 +67,20 @@ public class FavoriteService {
     }
 
     /**
-     * Remove a story from the current user's favorite list.
+     * Xóa truyện khỏi danh sách yêu thích của người dùng hiện tại.
      */
     @Transactional
     public void removeFavorite(Long storyId) {
         User currentUser = getCurrentUser();
         Favorite favorite = favoriteRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Story not found in your favorites list"));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy truyện trong danh sách yêu thích của bạn"));
 
         favoriteRepository.delete(favorite);
     }
 
     /**
-     * Get the total favorite count for a given story.
+     * Lấy tổng số lượt yêu thích cho một truyện cụ thể.
      */
     @Transactional(readOnly = true)
     public Long countFavoritesByStoryId(Long storyId) {
@@ -87,16 +88,16 @@ public class FavoriteService {
     }
 
     /**
-     * Get current authenticated user from SecurityContext.
+     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
     }
 
     /**
-     * Map Favorite entity to FavoriteResponse DTO.
+     * Chuyển đổi Favorite sang FavoriteResponse DTO.
      */
     private FavoriteResponse convertToResponse(Favorite favorite) {
         Story story = favorite.getStory();

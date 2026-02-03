@@ -35,7 +35,7 @@ public class TrendingController {
     private final CommentRepository commentRepository;
 
     /**
-     * Get trending stories by type (DAILY, WEEKLY, MONTHLY).
+     * Lấy danh sách truyện thịnh hành theo loại (NGÀY, TUẦN, THÁNG).
      */
     @GetMapping
     public ResponseEntity<List<StoryTrendingDTO>> getTrending(
@@ -71,7 +71,7 @@ public class TrendingController {
     }
 
     /**
-     * Track a story view for a specific user.
+     * Theo dõi lượt xem truyện của người dùng.
      */
     @PostMapping("/stories/{id}/view")
     public ResponseEntity<String> trackViewSimple(
@@ -81,15 +81,15 @@ public class TrendingController {
 
         try {
             viewService.trackView(id, userId, request.getRemoteAddr());
-            return ResponseEntity.ok("View tracked");
+            return ResponseEntity.ok("Đã ghi nhận lượt xem");
         } catch (Exception e) {
             log.error("Failed to track view for story: {}", id, e);
-            return ResponseEntity.ok("Tracking failed");
+            return ResponseEntity.ok("Ghi nhận thất bại");
         }
     }
 
     /**
-     * Track a story view via request body.
+     * Theo dõi lượt xem truyện qua request body.
      */
     @PostMapping("/track")
     public ResponseEntity<String> trackView(
@@ -106,7 +106,7 @@ public class TrendingController {
     }
 
     /**
-     * Manually refresh trending cache for a specific type.
+     * Làm mới thủ công bộ nhớ đệm thịnh hành cho một loại cụ thể.
      */
     @PostMapping("/refresh")
     public ResponseEntity<String> manualRefresh(
@@ -114,15 +114,15 @@ public class TrendingController {
 
         try {
             trendingService.manualRefresh(type);
-            return ResponseEntity.ok("Trending refreshed: " + type);
+            return ResponseEntity.ok("Đã làm mới thịnh hành: " + type);
         } catch (Exception e) {
             log.error("Failed to refresh trending: {}", type, e);
-            return ResponseEntity.status(500).body("Refresh failed: " + e.getMessage());
+            return ResponseEntity.status(500).body("Làm mới thất bại: " + e.getMessage());
         }
     }
 
     /**
-     * Get detailed statistics for a specific story.
+     * Lấy thống kê chi tiết cho một truyện cụ thể.
      */
     @GetMapping("/stats/{storyId}")
     public ResponseEntity<?> getStoryStats(@PathVariable Long storyId) {

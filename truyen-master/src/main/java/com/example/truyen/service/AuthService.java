@@ -26,7 +26,7 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
 
     /**
-     * Authenticate user and generate JWT token.
+     * Xác thực người dùng và tạo mã thông báo JWT.
      */
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -37,7 +37,7 @@ public class AuthService {
         String token = jwtTokenProvider.generateToken(authentication);
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BadRequestException("User does not exist"));
+                .orElseThrow(() -> new BadRequestException("Người dùng không tồn tại"));
 
         return new AuthResponse(
                 token,
@@ -48,16 +48,16 @@ public class AuthService {
     }
 
     /**
-     * Register a new user with default role.
+     * Đăng ký người dùng mới với vai trò mặc định.
      */
     @Transactional
     public String register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username already exists");
+            throw new BadRequestException("Tên đăng nhập đã tồn tại");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email already exists");
+            throw new BadRequestException("Email đã tồn tại");
         }
 
         User user = User.builder()
@@ -71,20 +71,20 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return "Registration successful";
+        return "Đăng ký thành công";
     }
 
     /**
-     * Logout user by blacklisting the current JWT token.
+     * Đăng xuất người dùng bằng cách vô hiệu hóa mã thông báo JWT hiện tại.
      */
     @Transactional
     public String logout(String token) {
         try {
             long expirationTime = jwtTokenProvider.getExpirationTimeMillis(token);
             tokenBlacklistService.blacklistToken(token, expirationTime);
-            return "Logout successful";
+            return "Đăng xuất thành công";
         } catch (Exception e) {
-            throw new BadRequestException("Invalid token");
+            throw new BadRequestException("Mã thông báo không hợp lệ");
         }
     }
 }

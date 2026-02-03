@@ -13,19 +13,19 @@ import java.time.LocalDateTime;
 @Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
 
-    // Tìm theo userId - ĐÃ SỬA: Integer -> Long
+
     Page<ActivityLog> findByUserId(Long userId, Pageable pageable);
 
-    // Tìm theo action
+
     Page<ActivityLog> findByAction(String action, Pageable pageable);
 
-    // Tìm theo tableName
+
     Page<ActivityLog> findByTableName(String tableName, Pageable pageable);
 
-    // Tìm theo khoảng thời gian
+
     Page<ActivityLog> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
 
-    // Search với nhiều điều kiện
+
     @Query("SELECT a FROM ActivityLog a WHERE " +
             "(:userId IS NULL OR a.userId = :userId) AND " +
             "(:action IS NULL OR a.action = :action) AND " +

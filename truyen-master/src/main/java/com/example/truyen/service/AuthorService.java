@@ -21,7 +21,7 @@ public class AuthorService {
     private final AuthorRepository authorRepository;
 
     /**
-     * Retrieve all authors.
+     * Lấy danh sách tất cả tác giả.
      */
     @Transactional(readOnly = true)
     public List<AuthorResponse> getAllAuthors() {
@@ -32,7 +32,7 @@ public class AuthorService {
     }
 
     /**
-     * Retrieve author details by ID.
+     * Lấy chi tiết tác giả theo ID.
      */
     @Transactional(readOnly = true)
     public AuthorResponse getAuthorById(Long id) {
@@ -42,12 +42,12 @@ public class AuthorService {
     }
 
     /**
-     * Create a new author.
+     * Tạo tác giả mới.
      */
     @Transactional
     public AuthorResponse createAuthor(AuthorRequest request) {
         if (authorRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Author '" + request.getName() + "' already exists");
+            throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
         }
 
         Author author = Author.builder()
@@ -61,7 +61,7 @@ public class AuthorService {
     }
 
     /**
-     * Update an existing author's details.
+     * Cập nhật thông tin tác giả hiện có.
      */
     @Transactional
     public AuthorResponse updateAuthor(Long id, AuthorRequest request) {
@@ -70,7 +70,7 @@ public class AuthorService {
 
         if (request.getName() != null && !author.getName().equals(request.getName())) {
             if (authorRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Author '" + request.getName() + "' already exists");
+                throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
             }
             author.setName(request.getName());
         }
@@ -88,7 +88,7 @@ public class AuthorService {
     }
 
     /**
-     * Delete an author by ID.
+     * Xóa tác giả theo ID.
      */
     @Transactional
     public void deleteAuthor(Long id) {
@@ -98,7 +98,7 @@ public class AuthorService {
     }
 
     /**
-     * Search authors by name containing keyword.
+     * Tìm kiếm tác giả theo tên có chứa từ khóa.
      */
     @Transactional(readOnly = true)
     public List<AuthorResponse> searchAuthors(String name) {
@@ -116,7 +116,7 @@ public class AuthorService {
     }
 
     /**
-     * Map Author entity to AuthorResponse DTO.
+     * Chuyển đổi Author sang AuthorResponse DTO.
      */
     private AuthorResponse convertToResponse(Author author) {
         return AuthorResponse.builder()

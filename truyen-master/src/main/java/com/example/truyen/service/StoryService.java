@@ -34,7 +34,7 @@ public class StoryService {
     private final CategoryRepository categoryRepository;
 
     /**
-     * Retrieve all stories with pagination.
+     * Lấy danh sách tất cả truyện với phân trang.
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> getAllStories(int page, int size) {
@@ -42,7 +42,7 @@ public class StoryService {
     }
 
     /**
-     * Retrieve story details by ID.
+     * Lấy chi tiết truyện theo ID.
      */
     @Transactional(readOnly = true)
     public StoryResponse getStoryById(Long id) {
@@ -52,7 +52,7 @@ public class StoryService {
     }
 
     /**
-     * Search stories by title with pagination.
+     * Tìm kiếm truyện theo tiêu đề với phân trang.
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> searchStories(String keyword, int page, int size) {
@@ -60,7 +60,7 @@ public class StoryService {
     }
 
     /**
-     * Retrieve stories belonging to a specific category.
+     * Lấy danh sách truyện thuộc một thể loại cụ thể.
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> getStoriesByCategory(Long categoryId, int page, int size) {
@@ -68,14 +68,14 @@ public class StoryService {
     }
 
     /**
-     * Retrieve stories marked as HOT.
+     * Lấy danh sách truyện được hiển thị là HOT.
      */
     public Page<StoryResponse> getHotStories(int page, int size) {
         return storyRepository.findByIsHotTrue(PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
     /**
-     * Retrieve latest stories ordered by creation date.
+     * Lấy danh sách truyện mới nhất sắp xếp theo ngày tạo.
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> getLatestStories(int page, int size) {
@@ -83,7 +83,7 @@ public class StoryService {
     }
 
     /**
-     * Create a new story.
+     * Tạo truyện mới.
      */
     @Transactional
     public StoryResponse createStory(StoryRequest request) {
@@ -103,7 +103,7 @@ public class StoryService {
             try {
                 status = Story.Status.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid status: " + request.getStatus());
+                throw new BadRequestException("Trạng thái không hợp lệ: " + request.getStatus());
             }
         }
 
@@ -123,7 +123,7 @@ public class StoryService {
     }
 
     /**
-     * Update an existing story's details.
+     * Cập nhật thông tin truyện hiện có.
      */
     @Transactional
     public StoryResponse updateStory(Long id, StoryRequest request) {
@@ -154,7 +154,7 @@ public class StoryService {
             try {
                 story.setStatus(Story.Status.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Invalid status: " + request.getStatus());
+                throw new BadRequestException("Trạng thái không hợp lệ: " + request.getStatus());
             }
         }
 
@@ -162,7 +162,7 @@ public class StoryService {
     }
 
     /**
-     * Delete a story by ID.
+     * Xóa truyện theo ID.
      */
     @Transactional
     public void deleteStory(Long id) {
@@ -172,7 +172,7 @@ public class StoryService {
     }
 
     /**
-     * Increment total view count for a story.
+     * Tăng tổng số lượt xem của truyện.
      */
     @Transactional
     public void increaseView(Long id) {
@@ -183,7 +183,7 @@ public class StoryService {
     }
 
     /**
-     * Advanced filtering for stories based on multiple criteria.
+     * Lọc truyện nâng cao dựa trên nhiều tiêu chí.
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> filterStories(
@@ -209,7 +209,7 @@ public class StoryService {
             try {
                 storyStatus = Story.Status.valueOf(status.toUpperCase());
             } catch (IllegalArgumentException e) {
-                // Ignore invalid status
+
             }
         }
 
@@ -225,7 +225,7 @@ public class StoryService {
     }
 
     /**
-     * Retrieve all stories written by a specific author.
+     * Lấy danh sách tất cả truyện của một tác giả cụ thể.
      */
     public List<StoryResponse> getStoriesByAuthor(Long authorId) {
         return storyRepository.findByAuthorId(authorId)
@@ -244,7 +244,7 @@ public class StoryService {
     }
 
     /**
-     * Map Story entity to StoryResponse DTO.
+     * Chuyển đổi Story sang StoryResponse DTO.
      */
     private StoryResponse convertToResponse(Story story) {
         Set<String> categoryNames = story.getCategories().stream()

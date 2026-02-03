@@ -28,7 +28,7 @@ public class RatingService {
     private final StoryRepository storyRepository;
 
     /**
-     * Submit a new rating and review for a story.
+     * Gửi đánh giá và nhận xét mới cho truyện.
      */
     @Transactional
     public RatingResponse rateStory(RatingRequest request) {
@@ -39,7 +39,7 @@ public class RatingService {
 
         if (ratingRepository.existsByUserIdAndStoryId(currentUser.getId(), request.getStoryId())) {
             throw new BadRequestException(
-                    "You have already rated this story. Please update your existing rating instead.");
+                    "Bạn đã đánh giá truyện này rồi. Vui lòng cập nhật đánh giá hiện có.");
         }
 
         Rating rating = Rating.builder()
@@ -53,14 +53,14 @@ public class RatingService {
     }
 
     /**
-     * Update an existing rating and review.
+     * Cập nhật đánh giá và nhận xét hiện có.
      */
     @Transactional
     public RatingResponse updateRating(Long storyId, RatingRequest request) {
         User currentUser = getCurrentUser();
 
         Rating rating = ratingRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Rating not found for this story"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đánh giá cho truyện này"));
 
         rating.setRating(request.getRating());
         rating.setReview(request.getReview());
@@ -69,20 +69,20 @@ public class RatingService {
     }
 
     /**
-     * Delete user rating for a story.
+     * Xóa đánh giá của người dùng cho truyện.
      */
     @Transactional
     public void deleteRating(Long storyId) {
         User currentUser = getCurrentUser();
 
         Rating rating = ratingRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Rating not found for this story"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đánh giá cho truyện này"));
 
         ratingRepository.delete(rating);
     }
 
     /**
-     * Retrieve current user's rating for a specific story.
+     * Lấy đánh giá của người dùng hiện tại cho một truyện cụ thể.
      */
     @Transactional(readOnly = true)
     public RatingResponse getMyRatingForStory(Long storyId) {
@@ -95,7 +95,7 @@ public class RatingService {
     }
 
     /**
-     * Get aggregate rating information (average and total count) for a story.
+     * Lấy thông tin đánh giá tổng hợp (trung bình và tổng số) cho một truyện.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getStoryRatingInfo(Long storyId) {
@@ -113,16 +113,16 @@ public class RatingService {
     }
 
     /**
-     * Get current authenticated user from SecurityContext.
+     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
     }
 
     /**
-     * Map Rating entity to RatingResponse DTO.
+     * Chuyển đổi Rating sang RatingResponse DTO.
      */
     private RatingResponse convertToResponse(Rating rating) {
         return RatingResponse.builder()

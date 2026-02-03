@@ -36,7 +36,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Lấy username từ token
+    // Lấy tên đăng nhập từ token
     public String getUsernameFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -62,7 +62,7 @@ public class JwtTokenProvider {
         return expirationDate.getTime();
     }
 
-    // Validate token
+    // Xác thực token
     public boolean validateToken(String token) {
         try {
             Jwts.parser()

@@ -23,7 +23,7 @@ public class UpdateUserRequest {
 
     private Boolean isActive;
 
-    // Thêm password để có thể đổi password khi cập nhật
+
     @Size(min = 6, message = "Password phải có ít nhất 6 ký tự")
     private String password;
 }

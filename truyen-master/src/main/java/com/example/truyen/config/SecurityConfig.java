@@ -50,7 +50,7 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
-    // CORS CONFIG
+    // CẤU HÌNH CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -78,7 +78,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Public endpoints
+                        // Các endpoint công khai
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/stories/**").permitAll()
                         .requestMatchers("/api/chapters/**").permitAll()

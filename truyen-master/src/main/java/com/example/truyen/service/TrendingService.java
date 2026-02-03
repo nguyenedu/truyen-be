@@ -33,11 +33,11 @@ public class TrendingService {
     private final StoryViewService viewService;
 
     /**
-     * Calculate trending score for a story based on multiple metrics:
-     * - View Score (40%)
-     * - Rating Score (20%)
-     * - Engagement Score (30%)
-     * - Recency Score (10%)
+     * Tính toán điểm xu hướng cho truyện dựa trên nhiều tiêu chí:
+     * - Điểm lượt xem (40%)
+     * - Điểm đánh giá (20%)
+     * - Điểm tương tác (30%)
+     * - Điểm độ mới (10%)
      */
     public double calculateTrendingScore(Story story, int days) {
         try {
@@ -69,47 +69,47 @@ public class TrendingService {
 
             return viewScore + ratingScore + engagementScore + recencyScore;
         } catch (Exception e) {
-            log.error("Error calculating trending score for story ID {}: {}", story.getId(), e.getMessage());
+            log.error("Lỗi khi tính điểm xu hướng cho truyện có ID {}: {}", story.getId(), e.getMessage());
             return 0;
         }
     }
 
     /**
-     * Refreshes DAILY trending rankings every 30 minutes.
+     * Làm mới bảng xếp hạng xu hướng HÀNG NGÀY mỗi 30 phút.
      */
     @Scheduled(cron = "0 */30 * * * *")
     @Transactional
     public void refreshDailyTrending() {
-        log.info("Starting DAILY trending refresh...");
+        log.info("Bắt đầu làm mới xu hướng HÀNG NGÀY...");
         refreshTrending(Ranking.RankingType.DAILY, 1, RedisKeyConstants.TRENDING_DAILY);
-        log.info("Finished DAILY trending refresh");
+        log.info("Hoàn tất làm mới xu hướng HÀNG NGÀY");
     }
 
     /**
-     * Refreshes WEEKLY trending rankings every 2 hours.
+     * Làm mới bảng xếp hạng xu hướng HÀNG TUẦN mỗi 2 giờ.
      */
     @Scheduled(cron = "0 0 */2 * * *")
     @Transactional
     public void refreshWeeklyTrending() {
-        log.info("Starting WEEKLY trending refresh...");
+        log.info("Bắt đầu làm mới xu hướng HÀNG TUẦN...");
         refreshTrending(Ranking.RankingType.WEEKLY, 7, RedisKeyConstants.TRENDING_WEEKLY);
-        log.info("Finished WEEKLY trending refresh");
+        log.info("Hoàn tất làm mới xu hướng HÀNG TUẦN");
     }
 
     /**
-     * Refreshes MONTHLY trending rankings every 6 hours.
+     * Làm mới bảng xếp hạng xu hướng HÀNG THÁNG mỗi 6 giờ.
      */
     @Scheduled(cron = "0 0 */6 * * *")
     @Transactional
     public void refreshMonthlyTrending() {
-        log.info("Starting MONTHLY trending refresh...");
+        log.info("Bắt đầu làm mới xu hướng HÀNG THÁNG...");
         refreshTrending(Ranking.RankingType.MONTHLY, 30, RedisKeyConstants.TRENDING_MONTHLY);
-        log.info("Finished MONTHLY trending refresh");
+        log.info("Hoàn tất làm mới xu hướng HÀNG THÁNG");
     }
 
     /**
-     * Core logic to calculate trending scores and update both database and Redis
-     * cache.
+     * Logic cốt lõi để tính điểm xu hướng và cập nhật cả cơ sở dữ liệu và bộ nhớ
+     * đệm Redis.
      */
     private void refreshTrending(Ranking.RankingType rankingType, int days, String redisKey) {
         try {
@@ -118,10 +118,10 @@ public class TrendingService {
             List<Story> stories = storyRepository.findByStatusInWithDetails(
                     Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED));
 
-            log.info("Calculating {} trending for {} stories", rankingType, stories.size());
+            log.info("Đang tính toán xu hướng {} cho {} truyện", rankingType, stories.size());
 
             if (stories.isEmpty()) {
-                log.warn("No active stories found for trending calculation");
+                log.warn("Không tìm thấy truyện đang hoạt động nào để tính toán xu hướng");
                 return;
             }
 
@@ -153,7 +153,8 @@ public class TrendingService {
                                     .trendingScore(score)
                                     .build();
                         } catch (Exception e) {
-                            log.error("Failed to process trending for story ID {}: {}", story.getId(), e.getMessage());
+                            log.error("Không thể xử lý xu hướng cho truyện có ID {}: {}", story.getId(),
+                                    e.getMessage());
                             return null;
                         }
                     })
@@ -163,7 +164,7 @@ public class TrendingService {
                     .collect(Collectors.toList());
 
             if (trendingList.isEmpty()) {
-                log.warn("Trending calculation resulted in an empty list");
+                log.warn("Tính toán xu hướng cho kết quả là danh sách trống");
                 return;
             }
 
@@ -186,15 +187,15 @@ public class TrendingService {
             }
 
             cacheToRedis(redisKey, trendingList, rankingType);
-            log.info("Successfully refreshed {} trending with {} items", rankingType, trendingList.size());
+            log.info("Làm mới thành công xu hướng {} với {} mục", rankingType, trendingList.size());
 
         } catch (Exception e) {
-            log.error("Critical error during trending refresh: {}", e.getMessage(), e);
+            log.error("Lỗi nghiêm trọng trong quá trình làm mới xu hướng: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * Cache trending data to Redis with appropriate TTL.
+     * Lưu dữ liệu xu hướng vào Redis với thời gian sống (TTL) phù hợp.
      */
     private void cacheToRedis(String redisKey, List<StoryTrendingDTO> trendingList, Ranking.RankingType rankingType) {
         try {
@@ -222,8 +223,8 @@ public class TrendingService {
     }
 
     /**
-     * Retrieve max views across all stories for the last N days to normalize
-     * scores.
+     * Lấy tổng số lượt xem tối đa của tất cả các truyện trong N ngày qua để chuẩn
+     * hóa điểm số.
      */
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
@@ -252,8 +253,8 @@ public class TrendingService {
     }
 
     /**
-     * Retrieve trending stories for a given ranking type.
-     * Attempts to fetch from Redis first, falling back to database on cache miss.
+     * Lấy danh sách truyện xu hướng cho một loại xếp hạng cụ thể.
+     * Cố gắng lấy từ Redis trước, nếu không có sẽ lấy từ cơ sở dữ liệu.
      */
     @Transactional(readOnly = true)
     public List<StoryTrendingDTO> getTrending(Ranking.RankingType rankingType, int limit) {
@@ -279,7 +280,7 @@ public class TrendingService {
     }
 
     /**
-     * Fallback method to retrieve trending rankings from the database.
+     * Phương pháp dự phòng để lấy bảng xếp hạng xu hướng từ cơ sở dữ liệu.
      */
     private List<StoryTrendingDTO> getTrendingFromDB(Ranking.RankingType rankingType, int limit) {
         try {
@@ -327,7 +328,7 @@ public class TrendingService {
     }
 
     /**
-     * Manually trigger a refresh for a specific trending period.
+     * Kích hoạt làm mới thủ công cho một khoảng thời gian xu hướng cụ thể.
      */
     @Transactional
     public void manualRefresh(Ranking.RankingType rankingType) {
@@ -339,13 +340,13 @@ public class TrendingService {
     }
 
     /**
-     * Cleanup historical rankings older than 90 days.
+     * Xóa sạch các bảng xếp hạng lịch sử cũ hơn 90 ngày.
      */
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void cleanupOldRankings() {
         LocalDate cutoffDate = LocalDate.now().minusDays(90);
         rankingRepository.deleteOlderThan(cutoffDate);
-        log.info("Cleaned up historical rankings older than {}", cutoffDate);
+        log.info("Đã xóa sạch các bảng xếp hạng lịch sử cũ hơn {}", cutoffDate);
     }
 }

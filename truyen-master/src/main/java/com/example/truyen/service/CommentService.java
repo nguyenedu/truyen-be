@@ -30,8 +30,8 @@ public class CommentService {
     private final ChapterRepository chapterRepository;
 
     /**
-     * Retrieve comments for a story with pagination, ordered by creation date
-     * (descending).
+     * Lấy danh sách bình luận của truyện với phân trang, sắp xếp theo ngày tạo
+     * (giảm dần).
      */
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByStoryId(Long storyId, int page, int size) {
@@ -43,7 +43,7 @@ public class CommentService {
     }
 
     /**
-     * Retrieve comments for a specific chapter with pagination.
+     * Lấy danh sách bình luận của một chương cụ thể với phân trang.
      */
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByChapterId(Long chapterId, int page, int size) {
@@ -55,14 +55,14 @@ public class CommentService {
     }
 
     /**
-     * Create a new comment linked to either a story or a chapter.
+     * Tạo bình luận mới liên kết với truyện hoặc chương.
      */
     @Transactional
     public CommentResponse createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
 
         if (request.getStoryId() == null && request.getChapterId() == null) {
-            throw new BadRequestException("Either Story ID or Chapter ID must be provided");
+            throw new BadRequestException("Phải cung cấp ID truyện hoặc ID chương");
         }
 
         Story story = null;
@@ -93,7 +93,7 @@ public class CommentService {
     }
 
     /**
-     * Update comment content if user has ownership.
+     * Cập nhật nội dung bình luận nếu người dùng có quyền sở hữu.
      */
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentRequest request) {
@@ -102,7 +102,7 @@ public class CommentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
         if (!comment.getUser().getId().equals(currentUser.getId())) {
-            throw new BadRequestException("You do not have permission to edit this comment");
+            throw new BadRequestException("Bạn không có quyền chỉnh sửa bình luận này");
         }
 
         comment.setContent(request.getContent());
@@ -110,7 +110,7 @@ public class CommentService {
     }
 
     /**
-     * Delete a comment if user has ownership or is an administrator.
+     * Xóa bình luận nếu người dùng có quyền sở hữu hoặc là quản trị viên.
      */
     @Transactional
     public void deleteComment(Long commentId) {
@@ -119,14 +119,14 @@ public class CommentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
         if (!comment.getUser().getId().equals(currentUser.getId()) && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("You do not have permission to delete this comment");
+            throw new BadRequestException("Bạn không có quyền xóa bình luận này");
         }
 
         commentRepository.delete(comment);
     }
 
     /**
-     * Get total comment count for a story.
+     * Lấy tổng số bình luận của một truyện.
      */
     @Transactional(readOnly = true)
     public Long countCommentsByStoryId(Long storyId) {
@@ -134,7 +134,7 @@ public class CommentService {
     }
 
     /**
-     * Get total comment count for a chapter.
+     * Lấy tổng số bình luận của một chương.
      */
     @Transactional(readOnly = true)
     public Long countCommentsByChapterId(Long chapterId) {
@@ -142,16 +142,16 @@ public class CommentService {
     }
 
     /**
-     * Get current authenticated user from SecurityContext.
+     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tìm thấy"));
     }
 
     /**
-     * Map Comment entity to CommentResponse DTO.
+     * Chuyển đổi Comment sang CommentResponse DTO.
      */
     private CommentResponse convertToResponse(Comment comment) {
         return CommentResponse.builder()

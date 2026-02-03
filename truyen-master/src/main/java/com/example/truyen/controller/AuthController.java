@@ -20,15 +20,15 @@ public class AuthController {
     private final AuthService authService;
 
     /**
-     * Authenticate user and return token.
+     * Xác thực người dùng và trả về token.
      */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Login successful", authService.login(request)));
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", authService.login(request)));
     }
 
     /**
-     * Register a new user.
+     * Đăng ký người dùng mới.
      */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
@@ -36,7 +36,7 @@ public class AuthController {
     }
 
     /**
-     * Log out current user by invalidating token.
+     * Đăng xuất người dùng hiện tại bằng cách hủy token.
      */
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
@@ -47,6 +47,6 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success(authService.logout(bearerToken.substring(7)), null));
         }
 
-        return ResponseEntity.badRequest().body(ApiResponse.error("Invalid token"));
+        return ResponseEntity.badRequest().body(ApiResponse.error("Token không hợp lệ"));
     }
 }

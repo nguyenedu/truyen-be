@@ -20,7 +20,7 @@ public class ActivityLogController {
     private final ActivityLogService activityLogService;
 
     /**
-     * Get all activity logs with optional filtering.
+     * Lấy danh sách nhật ký hoạt động với bộ lọc tùy chọn.
      */
     @GetMapping
     public ResponseEntity<Page<ActivityLog>> getAllLogs(
@@ -45,7 +45,7 @@ public class ActivityLogController {
     }
 
     /**
-     * Get activity logs for a specific user.
+     * Lấy nhật ký hoạt động của một người dùng cụ thể.
      */
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")

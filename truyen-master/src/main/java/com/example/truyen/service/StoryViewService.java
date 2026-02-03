@@ -21,8 +21,7 @@ public class StoryViewService {
     private final StoryRepository storyRepository;
 
     /**
-     * trackView increments view counts and tracks unique viewers for a given story.
-     * Executed asynchronously to prevent blocking the response.
+     * trackView tăng lượt view và số người dùng xem Story ấy.
      */
     @Async
     @Transactional
@@ -30,24 +29,24 @@ public class StoryViewService {
         try {
             String today = LocalDate.now().toString();
 
-            // 1. Increment today's view count
+            // 1. Tăng lượng views trong ngày
             String viewKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
             Long currentViews = redisTemplate.opsForValue().increment(viewKey, 1);
             redisTemplate.expire(viewKey, Duration.ofDays(1));
 
-            // 2. Track unique viewers
+            // 2. Đếm số lượng user đã xem trong ngày
             if (userId != null) {
                 String viewerKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
                 redisTemplate.opsForSet().add(viewerKey, userId);
                 redisTemplate.expire(viewerKey, Duration.ofDays(1));
             }
 
-            // 3. Increment historical view count by date
+            // 3. tăng lượt view theo ngày
             String dateViewKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
             redisTemplate.opsForValue().increment(dateViewKey, 1);
             redisTemplate.expire(dateViewKey, Duration.ofDays(35));
 
-            // 4. Batch sync to database for every 10 views
+            // 4. Đồng bộ hóa với cơ sở dữ liệu sau mỗi 10 lượt xem
             if (currentViews != null && currentViews % 10 == 0) {
                 storyRepository.incrementTotalViews(storyId, 10);
                 log.debug("Synced 10 views to database for story ID: {}", storyId);
@@ -61,7 +60,7 @@ public class StoryViewService {
     }
 
     /**
-     * Retrieve aggregate view count for the last N days.
+     * Đếm số lượng view trung bình trong N ngày
      */
     public Long getRecentViews(Long storyId, int days) {
         long totalViews = 0;
@@ -81,7 +80,7 @@ public class StoryViewService {
     }
 
     /**
-     * Retrieve the number of unique viewers for today.
+     * Dếm số người dùng duy nhất đã xem truyện trong ngày hôm nay.
      */
     public Long getUniqueViewersToday(Long storyId) {
         String key = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
@@ -90,7 +89,7 @@ public class StoryViewService {
     }
 
     /**
-     * Retrieve total views for today.
+     *  Tính tổng số view trong ngày
      */
     public Long getViewsToday(Long storyId) {
         String key = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
@@ -99,8 +98,7 @@ public class StoryViewService {
     }
 
     /**
-     * Synchronize all remaining view counts from Redis to the database.
-     * Intended for end-of-day synchronization.
+     * Đồng bộ lượt xem từ redis về cơ sở dữ liệu.
      */
     @Transactional
     public void syncAllViewsToDatabase() {

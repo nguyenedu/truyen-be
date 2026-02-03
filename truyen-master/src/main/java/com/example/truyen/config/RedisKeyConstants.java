@@ -1,8 +1,8 @@
 package com.example.truyen.config;
 
 /**
- * Redis Key Constants
- * Chứa tất cả các key patterns dùng trong Redis
+ * Hằng số khóa Redis
+ * Chứa tất cả các mẫu khóa dùng trong Redis
  */
 public class RedisKeyConstants {
 
@@ -37,7 +37,6 @@ public class RedisKeyConstants {
      * Ví dụ: story:viewers:today:1 = {3, 5, 7, 12}
      */
     public static final String STORY_UNIQUE_VIEWERS_TODAY = "story:viewers:today:";
-
 
     // ==================== TRENDING CACHE ====================
 
@@ -75,7 +74,6 @@ public class RedisKeyConstants {
      */
     public static final String STORY_TRENDING_SCORE = "story:trending:score:";
 
-
     // ==================== HELPER KEYS ====================
 
     /**
@@ -87,7 +85,6 @@ public class RedisKeyConstants {
      * Ví dụ: max:views:7d = "1500000"
      */
     public static final String MAX_VIEWS_PREFIX = "max:views:";
-
 
     // ==================== PRIVATE CONSTRUCTOR ====================
 

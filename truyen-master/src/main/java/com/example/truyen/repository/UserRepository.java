@@ -21,7 +21,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Boolean existsByEmail(String email);
 
-    // Tìm kiếm user theo username, email, hoặc fullname
     @Query("SELECT u FROM User u WHERE " +
             "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

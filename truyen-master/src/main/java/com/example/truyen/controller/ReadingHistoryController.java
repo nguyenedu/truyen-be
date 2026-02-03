@@ -19,54 +19,54 @@ public class ReadingHistoryController {
     private final ReadingHistoryService readingHistoryService;
 
     /**
-     * Get the current user's reading history.
+     * Lấy lịch sử đọc của người dùng hiện tại.
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ReadingHistoryResponse>>> getMyReadingHistory(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success("Reading history retrieved successfully",
+        return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử đọc thành công",
                 readingHistoryService.getMyReadingHistory(page, size)));
     }
 
     /**
-     * Get reading history for a specific story.
+     * Lấy lịch sử đọc của một truyện cụ thể.
      */
     @GetMapping("/story/{storyId}")
     public ResponseEntity<ApiResponse<ReadingHistoryResponse>> getReadingHistoryForStory(@PathVariable Long storyId) {
         ReadingHistoryResponse history = readingHistoryService.getReadingHistoryForStory(storyId);
-        String message = (history == null) ? "No reading history for this story"
-                : "Reading history retrieved successfully";
+        String message = (history == null) ? "Không có lịch sử đọc cho truyện này"
+                : "Lấy lịch sử đọc thành công";
         return ResponseEntity.ok(ApiResponse.success(message, history));
     }
 
     /**
-     * Save or update reading progress.
+     * Lưu hoặc cập nhật tiến trình đọc.
      */
     @PostMapping("/story/{storyId}/chapter/{chapterId}")
     public ResponseEntity<ApiResponse<ReadingHistoryResponse>> saveReadingHistory(
             @PathVariable Long storyId,
             @PathVariable Long chapterId) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Reading progress saved successfully",
+                .body(ApiResponse.success("Lưu tiến trình đọc thành công",
                         readingHistoryService.saveReadingHistory(storyId, chapterId)));
     }
 
     /**
-     * Delete reading history for a specific story.
+     * Xóa lịch sử đọc của một truyện cụ thể.
      */
     @DeleteMapping("/story/{storyId}")
     public ResponseEntity<ApiResponse<String>> deleteReadingHistory(@PathVariable Long storyId) {
         readingHistoryService.deleteReadingHistory(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Story reading history deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("Xóa lịch sử đọc thành công", null));
     }
 
     /**
-     * Clear entire reading history.
+     * Xóa toàn bộ lịch sử đọc.
      */
     @DeleteMapping("/all")
     public ResponseEntity<ApiResponse<String>> deleteAllReadingHistory() {
         readingHistoryService.deleteAllReadingHistory();
-        return ResponseEntity.ok(ApiResponse.success("All reading history cleared successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("Đã xóa toàn bộ lịch sử đọc thành công", null));
     }
 }

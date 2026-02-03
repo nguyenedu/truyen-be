@@ -20,7 +20,7 @@ public class UploadFileController {
     private final MinIoService minIoService;
 
     /**
-     * Upload a file to a specified folder (defaults to 'images').
+     * Tải lên một tập tin vào thư mục chỉ định (mặc định là 'images').
      */
     @PostMapping("/upload")
     public ResponseEntity<?> upload(

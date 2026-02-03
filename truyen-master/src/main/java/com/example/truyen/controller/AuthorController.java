@@ -25,23 +25,25 @@ public class AuthorController {
     private final MinIoService minIoService;
 
     /**
-     * Get all authors.
+     * Lấy danh sách tất cả tác giả.
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> getAllAuthors() {
-        return ResponseEntity.ok(ApiResponse.success("Authors retrieved successfully", authorService.getAllAuthors()));
+        return ResponseEntity
+                .ok(ApiResponse.success("Lấy danh sách tác giả thành công", authorService.getAllAuthors()));
     }
 
     /**
-     * Get author details by ID.
+     * Lấy chi tiết tác giả theo ID.
      */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AuthorResponse>> getAuthorById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Author retrieved successfully", authorService.getAuthorById(id)));
+        return ResponseEntity
+                .ok(ApiResponse.success("Lấy thông tin tác giả thành công", authorService.getAuthorById(id)));
     }
 
     /**
-     * Create author with avatar (Multipart).
+     * Tạo tác giả mới với ảnh đại diện (Multipart).
      */
     @PostMapping(consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
@@ -57,21 +59,21 @@ public class AuthorController {
         request.setAvatar(avatarUrl);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Author created successfully", authorService.createAuthor(request)));
+                .body(ApiResponse.success("Tạo tác giả thành công", authorService.createAuthor(request)));
     }
 
     /**
-     * Create author (JSON).
+     * Tạo tác giả mới (JSON).
      */
     @PostMapping(consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> createAuthor(@Valid @RequestBody AuthorRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Author created successfully", authorService.createAuthor(request)));
+                .body(ApiResponse.success("Tạo tác giả thành công", authorService.createAuthor(request)));
     }
 
     /**
-     * Update author with avatar (Multipart).
+     * Cập nhật thông tin tác giả với ảnh đại diện (Multipart).
      */
     @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
@@ -88,11 +90,11 @@ public class AuthorController {
         request.setAvatar(avatarUrl);
 
         return ResponseEntity
-                .ok(ApiResponse.success("Author updated successfully", authorService.updateAuthor(id, request)));
+                .ok(ApiResponse.success("Cập nhật tác giả thành công", authorService.updateAuthor(id, request)));
     }
 
     /**
-     * Update author (JSON).
+     * Cập nhật thông tin tác giả (JSON).
      */
     @PutMapping(value = "/{id}", consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
@@ -100,26 +102,26 @@ public class AuthorController {
             @PathVariable Long id,
             @Valid @RequestBody AuthorRequest request) {
         return ResponseEntity
-                .ok(ApiResponse.success("Author updated successfully", authorService.updateAuthor(id, request)));
+                .ok(ApiResponse.success("Cập nhật tác giả thành công", authorService.updateAuthor(id, request)));
     }
 
     /**
-     * Delete an author.
+     * Xóa một tác giả.
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteAuthor(@PathVariable Long id) {
         authorService.deleteAuthor(id);
-        return ResponseEntity.ok(ApiResponse.success("Author deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.success("Xóa tác giả thành công", null));
     }
 
     /**
-     * Search authors by name.
+     * Tìm kiếm tác giả theo tên.
      */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> searchAuthors(
             @RequestParam(required = false) String name) {
         return ResponseEntity
-                .ok(ApiResponse.success("Search completed successfully", authorService.searchAuthors(name)));
+                .ok(ApiResponse.success("Tìm kiếm hoàn tất", authorService.searchAuthors(name)));
     }
 }

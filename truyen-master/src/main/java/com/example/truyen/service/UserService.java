@@ -27,7 +27,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * Retrieve all users with pagination.
+     * Lấy danh sách tất cả người dùng với phân trang.
      */
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(int page, int size) {
@@ -35,7 +35,7 @@ public class UserService {
     }
 
     /**
-     * Retrieve user details by ID.
+     * Lấy chi tiết người dùng theo ID.
      */
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
@@ -45,7 +45,7 @@ public class UserService {
     }
 
     /**
-     * Retrieve profile of the currently authenticated user.
+     * Lấy hồ sơ của người dùng hiện đang đăng nhập.
      */
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser() {
@@ -53,8 +53,8 @@ public class UserService {
     }
 
     /**
-     * Update user details. Access restricted to the user themselves or
-     * administrators.
+     * Cập nhật chi tiết người dùng. Chỉ chính người dùng đó
+     * hoặc quản trị viên.
      */
     @Transactional
     public UserResponse updateUser(Long id, UpdateUserRequest request) {
@@ -65,7 +65,7 @@ public class UserService {
         if (!currentUser.getId().equals(id) &&
                 !currentUser.getRole().equals(User.Role.SUPER_ADMIN) &&
                 !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("You do not have permission to update this user's information");
+            throw new BadRequestException("Bạn không có quyền cập nhật thông tin của người dùng này");
         }
 
         if (request.getFullname() != null) {
@@ -74,7 +74,7 @@ public class UserService {
 
         if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new BadRequestException("Email already exists");
+                throw new BadRequestException("Email đã tồn tại");
             }
             user.setEmail(request.getEmail());
         }
@@ -91,7 +91,6 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
-        // Only SUPER_ADMIN and ADMIN can enable/disable accounts
         if (request.getIsActive() != null &&
                 (currentUser.getRole().equals(User.Role.SUPER_ADMIN) ||
                         currentUser.getRole().equals(User.Role.ADMIN))) {
@@ -102,36 +101,36 @@ public class UserService {
     }
 
     /**
-     * Change user role. Restricted to SUPER_ADMIN.
+     * Thay đổi quyền người dùng. Chỉ với quyền SUPER_ADMIN.
      */
     @Transactional
     public UserResponse changeUserRole(ChangeRoleRequest request) {
         User currentUser = getCurrentUserEntity();
 
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Only SUPER_ADMIN has permission to change roles");
+            throw new BadRequestException("Chỉ SUPER_ADMIN mới có quyền thay đổi vai trò");
         }
 
         User targetUser = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getUserId()));
 
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("You cannot change your own role");
+            throw new BadRequestException("Bạn không thể tự thay đổi vai trò của mình");
         }
 
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Cannot change the role of another SUPER_ADMIN");
+            throw new BadRequestException("Không thể thay đổi vai trò của một SUPER_ADMIN khác");
         }
 
         User.Role newRole;
         try {
             newRole = User.Role.valueOf(request.getRole().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid role: " + request.getRole());
+            throw new BadRequestException("Vai trò không hợp lệ: " + request.getRole());
         }
 
         if (newRole.equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Cannot assign SUPER_ADMIN role");
+            throw new BadRequestException("Không thể gán vai trò SUPER_ADMIN");
         }
 
         targetUser.setRole(newRole);
@@ -139,30 +138,31 @@ public class UserService {
     }
 
     /**
-     * Toggle user active status (Ban/Unban). Restricted to SUPER_ADMIN and ADMIN.
+     * Bật/Tắt trạng thái hoạt động của người dùng (Chặn/Bỏ chặn). Chỉ
+     * với quyền SUPER_ADMIN và ADMIN.
      */
     @Transactional
     public UserResponse toggleUserStatus(Long userId) {
         User currentUser = getCurrentUserEntity();
 
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN) && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Only SUPER_ADMIN and ADMIN have permission to change account status");
+            throw new BadRequestException("Chỉ SUPER_ADMIN và ADMIN mới có quyền thay đổi trạng thái tài khoản");
         }
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("You cannot change your own status");
+            throw new BadRequestException("Bạn không thể tự thay đổi trạng thái của mình");
         }
 
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Cannot change the status of a SUPER_ADMIN");
+            throw new BadRequestException("Không thể thay đổi trạng thái của một SUPER_ADMIN");
         }
 
         if (currentUser.getRole().equals(User.Role.ADMIN) &&
                 targetUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("ADMIN cannot ban another ADMIN");
+            throw new BadRequestException("ADMIN không thể chặn một ADMIN khác");
         }
 
         targetUser.setIsActive(!targetUser.getIsActive());
@@ -170,36 +170,36 @@ public class UserService {
     }
 
     /**
-     * Delete a user. Restricted to SUPER_ADMIN and ADMIN.
+     * Xóa một người dùng. Chỉ với quyền SUPER_ADMIN và ADMIN.
      */
     @Transactional
     public void deleteUser(Long userId) {
         User currentUser = getCurrentUserEntity();
 
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN) && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Only SUPER_ADMIN and ADMIN have permission to delete users");
+            throw new BadRequestException("Chỉ SUPER_ADMIN và ADMIN mới có quyền xóa người dùng");
         }
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("You cannot delete yourself");
+            throw new BadRequestException("Bạn không thể tự xóa chính mình");
         }
 
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Cannot delete a SUPER_ADMIN");
+            throw new BadRequestException("Không thể xóa một SUPER_ADMIN");
         }
 
         if (currentUser.getRole().equals(User.Role.ADMIN) &&
                 targetUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("ADMIN cannot delete another ADMIN");
+            throw new BadRequestException("ADMIN không thể xóa một ADMIN khác");
         }
         userRepository.delete(targetUser);
     }
 
     /**
-     * Count users belonging to a specific role.
+     * Đếm số lượng người dùng thuộc một vai trò cụ thể.
      */
     @Transactional(readOnly = true)
     public long countUsersByRole(String role) {
@@ -214,12 +214,12 @@ public class UserService {
     }
 
     /**
-     * Create a new user with default USER role.
+     * Tạo người dùng mới với vai trò USER mặc định.
      */
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username already exists");
+            throw new BadRequestException("Tên đăng nhập đã tồn tại");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -239,16 +239,16 @@ public class UserService {
     }
 
     /**
-     * Retrieve the current authenticated user entity.
+     * Lấy người dùng hiện đang đăng nhập.
      */
     private User getCurrentUserEntity() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
     }
 
     /**
-     * Search users by keyword with pagination and sorting.
+     * Tìm kiếm người dùng theo từ khóa với phân trang và sắp xếp.
      */
     @Transactional(readOnly = true)
     public Page<UserResponse> searchUsers(String keyword, int page, int size, String sortField, String sortDir) {
@@ -263,7 +263,7 @@ public class UserService {
     }
 
     /**
-     * Map User entity to UserResponse DTO.
+     * Chuyển đổi User sang UserResponse DTO.
      */
     private UserResponse convertToResponse(User user) {
         return UserResponse.builder()

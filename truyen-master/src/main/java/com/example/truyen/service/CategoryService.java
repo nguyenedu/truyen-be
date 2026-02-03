@@ -20,7 +20,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     /**
-     * Retrieve all categories.
+     * Lấy danh sách tất cả thể loại.
      */
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
@@ -31,7 +31,7 @@ public class CategoryService {
     }
 
     /**
-     * Retrieve category details by ID.
+     * Lấy chi tiết thể loại theo ID.
      */
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
@@ -41,12 +41,12 @@ public class CategoryService {
     }
 
     /**
-     * Create a new category.
+     * Tạo thể loại mới.
      */
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Category '" + request.getName() + "' already exists");
+            throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
         }
 
         Category category = Category.builder()
@@ -59,7 +59,7 @@ public class CategoryService {
     }
 
     /**
-     * Update an existing category identifier by ID.
+     * Cập nhật thông tin thể loại theo ID.
      */
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
@@ -68,7 +68,7 @@ public class CategoryService {
 
         if (request.getName() != null && !category.getName().equals(request.getName())) {
             if (categoryRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Category '" + request.getName() + "' already exists");
+                throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
             }
             category.setName(request.getName());
         }
@@ -82,7 +82,7 @@ public class CategoryService {
     }
 
     /**
-     * Delete a category by ID.
+     * Xóa thể loại theo ID.
      */
     @Transactional
     public void deleteCategory(Long id) {
@@ -92,7 +92,7 @@ public class CategoryService {
     }
 
     /**
-     * Map Category entity to CategoryResponse DTO.
+     * Chuyển đổi Category sang CategoryResponse DTO.
      */
     private CategoryResponse convertToResponse(Category category) {
         return CategoryResponse.builder()
