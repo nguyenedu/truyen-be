@@ -29,9 +29,6 @@ public class LoggingAspect {
 
     private final ActivityLogService activityLogService;
 
-    /**
-     * Pointcut cho tất cả Service methods
-     */
 
     @Pointcut       ("execution(* com.example.truyen.service..*(..)) && " +
             "!execution(* com.example.truyen.service.ActivityLogService.*(..))")
@@ -116,9 +113,7 @@ public class LoggingAspect {
         }
     }
 
-    /**
-     * Lấy User ID từ Spring Security Context
-     */
+
     private Long getCurrentUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -139,9 +134,6 @@ public class LoggingAspect {
         return null;
     }
 
-    /**
-     * Lấy IP address của client
-     */
     private String getClientIpAddress() {
         try {
             ServletRequestAttributes attributes =
@@ -169,9 +161,7 @@ public class LoggingAspect {
         return "Unknown";
     }
 
-    /**
-     * Trích xuất table name từ class name
-     */
+
     private String extractTableName(String className) {
         // VD: StoryService -> stories
         // UserService -> users
@@ -182,9 +172,6 @@ public class LoggingAspect {
         return null;
     }
 
-    /**
-     * Trích xuất record ID từ result hoặc args
-     */
     private Long extractRecordId(Object result, Object[] args) {
         try {
             // Nếu result có method getId()
@@ -210,9 +197,7 @@ public class LoggingAspect {
         return null;
     }
 
-    /**
-     * Build description cho success case
-     */
+
     private String buildDescription(String methodName, String parameters,
                                     String result, long executionTime) {
         return String.format(
