@@ -3,8 +3,8 @@ package com.example.truyen.service;
 import com.example.truyen.dto.response.ReadingHistoryResponse;
 import com.example.truyen.entity.Chapter;
 import com.example.truyen.entity.ReadingHistory;
-import com.example.truyen.entity.Story;
 import com.example.truyen.entity.User;
+import com.example.truyen.exception.BadRequestException;
 import com.example.truyen.exception.ResourceNotFoundException;
 import com.example.truyen.repository.ChapterRepository;
 import com.example.truyen.repository.ReadingHistoryRepository;
@@ -13,13 +13,10 @@ import com.example.truyen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,73 +27,70 @@ public class ReadingHistoryService {
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
 
-    // Lấy lịch sử đọc của user
+    /**
+     * Retrieve the current user's reading history with pagination.
+     */
     @Transactional(readOnly = true)
     public Page<ReadingHistoryResponse> getMyReadingHistory(int page, int size) {
         User currentUser = getCurrentUser();
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ReadingHistory> histories = readingHistoryRepository.findByUserIdOrderByReadAtDesc(
-                currentUser.getId(), pageable);
-        return histories.map(this::convertToResponse);
+        return readingHistoryRepository.findByUserIdOrderByReadAtDesc(currentUser.getId(), PageRequest.of(page, size))
+                .map(this::convertToResponse);
     }
 
-    // Lấy lịch sử đọc của 1 truyện
+    /**
+     * Retrieve reading status for a specific story.
+     */
     @Transactional(readOnly = true)
     public ReadingHistoryResponse getReadingHistoryForStory(Long storyId) {
         User currentUser = getCurrentUser();
-
-        Optional<ReadingHistory> history = readingHistoryRepository.findByUserIdAndStoryId(
-                currentUser.getId(), storyId);
-
-        return history.map(this::convertToResponse).orElse(null);
+        return readingHistoryRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
+                .map(this::convertToResponse)
+                .orElse(null);
     }
 
-    // Lưu/Cập nhật lịch sử đọc
+    /**
+     * Save or update reading progress for a specific story and chapter.
+     */
     @Transactional
     public ReadingHistoryResponse saveReadingHistory(Long storyId, Long chapterId) {
         User currentUser = getCurrentUser();
 
-        // Kiểm tra truyện tồn tại
-        Story story = storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Truyện", "id", storyId));
+        storyRepository.findById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Story", "id", storyId));
 
-        // Kiểm tra chương tồn tại
         Chapter chapter = chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chương", "id", chapterId));
+                .orElseThrow(() -> new ResourceNotFoundException("Chapter", "id", chapterId));
 
-        // Kiểm tra chương có thuộc truyện không
         if (!chapter.getStory().getId().equals(storyId)) {
-            throw new ResourceNotFoundException("Chương không thuộc truyện này");
+            throw new BadRequestException("Chapter does not belong to this story");
         }
 
-        // Tìm hoặc tạo mới reading history
         ReadingHistory history = readingHistoryRepository
                 .findByUserIdAndStoryId(currentUser.getId(), storyId)
                 .orElse(ReadingHistory.builder()
                         .user(currentUser)
-                        .story(story)
+                        .story(chapter.getStory())
                         .build());
 
-        // Cập nhật chương đang đọc
         history.setChapter(chapter);
-
-        ReadingHistory savedHistory = readingHistoryRepository.save(history);
-        return convertToResponse(savedHistory);
+        return convertToResponse(readingHistoryRepository.save(history));
     }
 
-    // Xóa lịch sử đọc của 1 truyện
+    /**
+     * Delete reading history for a specific story.
+     */
     @Transactional
     public void deleteReadingHistory(Long storyId) {
         User currentUser = getCurrentUser();
-
-        ReadingHistory history = readingHistoryRepository.findByUserIdAndStoryId(
-                        currentUser.getId(), storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Lịch sử đọc không tồn tại"));
+        ReadingHistory history = readingHistoryRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reading history not found for this story"));
 
         readingHistoryRepository.delete(history);
     }
 
-    // Xóa toàn bộ lịch sử đọc
+    /**
+     * Delete all reading history for the current user.
+     */
     @Transactional
     public void deleteAllReadingHistory() {
         User currentUser = getCurrentUser();
@@ -106,15 +100,18 @@ public class ReadingHistoryService {
         readingHistoryRepository.deleteAll(histories.getContent());
     }
 
-    // Lấy user hiện tại
+    /**
+     * Get current authenticated user from SecurityContext.
+     */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    // Convert Entity sang Response DTO
+    /**
+     * Map ReadingHistory entity to ReadingHistoryResponse DTO.
+     */
     private ReadingHistoryResponse convertToResponse(ReadingHistory history) {
         return ReadingHistoryResponse.builder()
                 .id(history.getId())

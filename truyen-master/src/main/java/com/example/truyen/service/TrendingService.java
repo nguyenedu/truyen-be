@@ -33,9 +33,11 @@ public class TrendingService {
     private final StoryViewService viewService;
 
     /**
-     * Tính trending score cho 1 story
-     * Score = ViewScore(40%) + RatingScore(20%) + EngagementScore(30%) +
-     * RecencyScore(10%)
+     * Calculate trending score for a story based on multiple metrics:
+     * - View Score (40%)
+     * - Rating Score (20%)
+     * - Engagement Score (30%)
+     * - Recency Score (10%)
      */
     public double calculateTrendingScore(Story story, int days) {
         try {
@@ -48,7 +50,7 @@ public class TrendingService {
             Double avgRating = ratingRepository.getAverageRating(story.getId());
             double ratingScore = avgRating != null ? (avgRating / 5.0 * 20.0) : 0;
 
-            // 3. Engagement Score (30%)
+            // 3. Engagement Score (30%): favorites, comments, and rating counts
             Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
             Long commentCount = commentRepository.countByStoryId(story.getId());
             Long ratingCount = ratingRepository.countByStoryId(story.getId());
@@ -56,72 +58,73 @@ public class TrendingService {
             double engagement = (favoriteCount * 3) + (commentCount * 2) + (ratingCount * 2);
             double engagementScore = Math.min(engagement / 100.0 * 30.0, 30.0);
 
-            // 4. Recency Score (10%)
+            // 4. Recency Score (10%): degradation over time since last update
             long daysSinceUpdate = 0;
             if (story.getUpdatedAt() != null) {
-                daysSinceUpdate = ChronoUnit.DAYS.between(
-                        story.getUpdatedAt().toLocalDate(),
-                        LocalDate.now());
+                daysSinceUpdate = ChronoUnit.DAYS.between(story.getUpdatedAt().toLocalDate(), LocalDate.now());
             } else if (story.getCreatedAt() != null) {
-                daysSinceUpdate = ChronoUnit.DAYS.between(
-                        story.getCreatedAt().toLocalDate(),
-                        LocalDate.now());
+                daysSinceUpdate = ChronoUnit.DAYS.between(story.getCreatedAt().toLocalDate(), LocalDate.now());
             }
             double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
 
             return viewScore + ratingScore + engagementScore + recencyScore;
         } catch (Exception e) {
-            log.error("Error calculating trending score for story {}: {}", story.getId(), e.getMessage());
+            log.error("Error calculating trending score for story ID {}: {}", story.getId(), e.getMessage());
             return 0;
         }
     }
 
+    /**
+     * Refreshes DAILY trending rankings every 30 minutes.
+     */
     @Scheduled(cron = "0 */30 * * * *")
     @Transactional
     public void refreshDailyTrending() {
-        log.info("Starting refresh DAILY trending...");
+        log.info("Starting DAILY trending refresh...");
         refreshTrending(Ranking.RankingType.DAILY, 1, RedisKeyConstants.TRENDING_DAILY);
-        log.info("Finished refresh DAILY trending");
-    }
-
-    @Scheduled(cron = "0 0 */2 * * *")
-    @Transactional
-    public void refreshWeeklyTrending() {
-        log.info("Starting refresh WEEKLY trending...");
-        refreshTrending(Ranking.RankingType.WEEKLY, 7, RedisKeyConstants.TRENDING_WEEKLY);
-        log.info("Finished refresh WEEKLY trending");
+        log.info("Finished DAILY trending refresh");
     }
 
     /**
-     * Scheduled: Refresh MONTHLY trending (mỗi 6 giờ)
+     * Refreshes WEEKLY trending rankings every 2 hours.
+     */
+    @Scheduled(cron = "0 0 */2 * * *")
+    @Transactional
+    public void refreshWeeklyTrending() {
+        log.info("Starting WEEKLY trending refresh...");
+        refreshTrending(Ranking.RankingType.WEEKLY, 7, RedisKeyConstants.TRENDING_WEEKLY);
+        log.info("Finished WEEKLY trending refresh");
+    }
+
+    /**
+     * Refreshes MONTHLY trending rankings every 6 hours.
      */
     @Scheduled(cron = "0 0 */6 * * *")
     @Transactional
     public void refreshMonthlyTrending() {
-        log.info("Starting refresh MONTHLY trending...");
+        log.info("Starting MONTHLY trending refresh...");
         refreshTrending(Ranking.RankingType.MONTHLY, 30, RedisKeyConstants.TRENDING_MONTHLY);
-        log.info("Finished refresh MONTHLY trending");
+        log.info("Finished MONTHLY trending refresh");
     }
 
     /**
-     * Core: Tính và lưu trending
+     * Core logic to calculate trending scores and update both database and Redis
+     * cache.
      */
     private void refreshTrending(Ranking.RankingType rankingType, int days, String redisKey) {
         try {
             LocalDate today = LocalDate.now();
 
-            // 1. Lấy stories ONGOING và COMPLETED with eager fetch
             List<Story> stories = storyRepository.findByStatusInWithDetails(
                     Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED));
 
             log.info("Calculating {} trending for {} stories", rankingType, stories.size());
 
             if (stories.isEmpty()) {
-                log.warn("No stories found with status ONGOING or COMPLETED!");
+                log.warn("No active stories found for trending calculation");
                 return;
             }
 
-            // 2. Tính score
             List<StoryTrendingDTO> trendingList = stories.parallelStream()
                     .map(story -> {
                         try {
@@ -130,11 +133,9 @@ public class TrendingService {
                             Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
                             Long commentCount = commentRepository.countByStoryId(story.getId());
 
-                            // Categories are now eagerly fetched
                             List<String> categoryNames = story.getCategories() != null
-                                    ? story.getCategories().stream()
-                                    .map(cat -> cat.getName())
-                                    .collect(Collectors.toList())
+                                    ? story.getCategories().stream().map(cat -> cat.getName())
+                                            .collect(Collectors.toList())
                                     : new java.util.ArrayList<>();
 
                             return StoryTrendingDTO.builder()
@@ -152,7 +153,7 @@ public class TrendingService {
                                     .trendingScore(score)
                                     .build();
                         } catch (Exception e) {
-                            log.error("Error processing story {}: {}", story.getId(), e.getMessage());
+                            log.error("Failed to process trending for story ID {}: {}", story.getId(), e.getMessage());
                             return null;
                         }
                     })
@@ -161,90 +162,69 @@ public class TrendingService {
                     .limit(100)
                     .collect(Collectors.toList());
 
-            log.info("Calculated trending list size: {}", trendingList.size());
-
             if (trendingList.isEmpty()) {
-                log.warn(
-                        "Trending list is empty after calculation! All stories may have been filtered out due to errors.");
+                log.warn("Trending calculation resulted in an empty list");
                 return;
             }
 
-            // 3. Xóa rankings cũ
             rankingRepository.deleteByRankingTypeAndDate(rankingType, today);
 
-            // 4. Lưu vào DB
             int rank = 1;
             for (StoryTrendingDTO dto : trendingList) {
-                Story story = storyRepository.findById(dto.getId()).orElse(null);
-                if (story != null) {
+                final int currentRank = rank;
+                storyRepository.findById(dto.getId()).ifPresent(story -> {
                     Ranking ranking = Ranking.builder()
                             .story(story)
-                            .rankPosition(rank++)
+                            .rankPosition(currentRank)
                             .rankingType(rankingType)
                             .rankingDate(today)
                             .views(dto.getTotalViews())
                             .build();
-
                     rankingRepository.save(ranking);
-                }
+                });
+                dto.setRank(rank++);
             }
 
-            // 5. Cache vào Redis
             cacheToRedis(redisKey, trendingList, rankingType);
+            log.info("Successfully refreshed {} trending with {} items", rankingType, trendingList.size());
 
         } catch (Exception e) {
-            log.error("Error refreshing trending: {}", e.getMessage(), e);
+            log.error("Critical error during trending refresh: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * Improved Redis caching with error handling
+     * Cache trending data to Redis with appropriate TTL.
      */
     private void cacheToRedis(String redisKey, List<StoryTrendingDTO> trendingList, Ranking.RankingType rankingType) {
         try {
-            log.info("Deleting old Redis cache for key: {}", redisKey);
-
-            // Delete old cache
-            Boolean deleted = redisTemplate.delete(redisKey);
-            log.debug("Old cache deleted: {}", deleted);
+            redisTemplate.delete(redisKey);
 
             if (!trendingList.isEmpty()) {
-                // Set rank numbers
-                for (int i = 0; i < trendingList.size(); i++) {
-                    trendingList.get(i).setRank(i + 1);
-                }
-
-                log.info("Caching {} trending stories to Redis key: {}", trendingList.size(), redisKey);
-
-                // Push each item to Redis list
-                for (StoryTrendingDTO dto : trendingList) {
+                trendingList.forEach(dto -> {
                     try {
                         redisTemplate.opsForList().rightPush(redisKey, dto);
-                        log.debug("Cached story: {} - {}", dto.getRank(), dto.getTitle());
                     } catch (Exception e) {
-                        log.error("Failed to cache story {}: {}", dto.getStoryId(), e.getMessage());
+                        log.error("Failed to cache story ID {} to Redis: {}", dto.getStoryId(), e.getMessage());
                     }
-                }
+                });
 
-                // Set TTL
                 Duration ttl = switch (rankingType) {
                     case DAILY -> Duration.ofMinutes(30);
                     case WEEKLY -> Duration.ofHours(2);
                     case MONTHLY -> Duration.ofHours(6);
                 };
-
-                Boolean expireSet = redisTemplate.expire(redisKey, ttl);
-                log.info("Successfully cached {} trending stories with TTL: {} (expire set: {})",
-                        trendingList.size(), ttl, expireSet);
-            } else {
-                log.warn("Trending list is empty, nothing to cache");
+                redisTemplate.expire(redisKey, ttl);
             }
-
         } catch (Exception e) {
-            log.error("Error caching to Redis key {}: {}", redisKey, e.getMessage(), e);
+            log.error("Failed to update Redis cache for key {}: {}", redisKey, e.getMessage(), e);
         }
     }
 
+    /**
+     * Retrieve max views across all stories for the last N days to normalize
+     * scores.
+     */
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
 
@@ -254,11 +234,10 @@ public class TrendingService {
                 return Long.parseLong(cached.toString());
             }
         } catch (Exception e) {
-            log.warn("Error reading max views from cache: {}", e.getMessage());
+            log.warn("Failed to read max views from cache: {}", e.getMessage());
         }
 
-        List<Story> stories = storyRepository.findAll();
-        long max = stories.stream()
+        long max = storyRepository.findAll().stream()
                 .mapToLong(s -> viewService.getRecentViews(s.getId(), days))
                 .max()
                 .orElse(1L);
@@ -266,15 +245,15 @@ public class TrendingService {
         try {
             redisTemplate.opsForValue().set(key, max, Duration.ofMinutes(30));
         } catch (Exception e) {
-            log.warn("Error caching max views: {}", e.getMessage());
+            log.warn("Failed to cache max views: {}", e.getMessage());
         }
 
         return max;
     }
 
     /**
-     * API: Lấy trending
-     * FIXED: Added @Transactional(readOnly = true) to keep session open for lazy loading
+     * Retrieve trending stories for a given ranking type.
+     * Attempts to fetch from Redis first, falling back to database on cache miss.
      */
     @Transactional(readOnly = true)
     public List<StoryTrendingDTO> getTrending(Ranking.RankingType rankingType, int limit) {
@@ -286,57 +265,39 @@ public class TrendingService {
 
         try {
             List<Object> cached = redisTemplate.opsForList().range(redisKey, 0, limit - 1);
-
             if (cached != null && !cached.isEmpty()) {
-                log.info("Cache HIT for {} trending, size: {}", rankingType, cached.size());
                 return cached.stream()
                         .map(obj -> (StoryTrendingDTO) obj)
                         .collect(Collectors.toList());
             }
         } catch (Exception e) {
-            log.error("Error reading trending from Redis: {}", e.getMessage());
-            // Fallback to DB
+            log.error("Failed to read trending from Redis: {}", e.getMessage());
         }
 
-        // Cache miss → Get from DB
-        log.warn("Cache MISS for {}, loading from DB", rankingType);
+        log.warn("Cache miss for {} trending, retrieving from database", rankingType);
         return getTrendingFromDB(rankingType, limit);
     }
 
     /**
-     * Fallback: Get trending from database
-     * IMPORTANT: This method is called within @Transactional context from getTrending()
+     * Fallback method to retrieve trending rankings from the database.
      */
     private List<StoryTrendingDTO> getTrendingFromDB(Ranking.RankingType rankingType, int limit) {
         try {
-            // Rankings now have Story, Author, and Categories eagerly fetched via JOIN FETCH
             List<Ranking> rankings = rankingRepository.findLatestByRankingType(rankingType);
-
-            log.info("Loaded {} rankings from DB for {}", rankings.size(), rankingType);
 
             return rankings.stream()
                     .limit(limit)
                     .map(ranking -> {
                         try {
                             Story story = ranking.getStory();
-
-                            // These are now safe to access because of @Transactional and JOIN FETCH
                             Double avgRating = ratingRepository.getAverageRating(story.getId());
                             Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
                             Long commentCount = commentRepository.countByStoryId(story.getId());
 
-                            // Categories and Author are eagerly loaded, safe to access
-                            List<String> categoryNames = new java.util.ArrayList<>();
-                            if (story.getCategories() != null) {
-                                categoryNames = story.getCategories().stream()
-                                        .map(cat -> cat.getName())
-                                        .collect(Collectors.toList());
-                            }
-
-                            String authorName = null;
-                            if (story.getAuthor() != null) {
-                                authorName = story.getAuthor().getName();
-                            }
+                            List<String> categoryNames = story.getCategories() != null
+                                    ? story.getCategories().stream().map(cat -> cat.getName())
+                                            .collect(Collectors.toList())
+                                    : new java.util.ArrayList<>();
 
                             return StoryTrendingDTO.builder()
                                     .id(story.getId())
@@ -345,7 +306,7 @@ public class TrendingService {
                                     .image(story.getImage())
                                     .totalViews(story.getTotalViews())
                                     .totalChapters(story.getTotalChapters())
-                                    .authorName(authorName)
+                                    .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
                                     .categories(categoryNames)
                                     .averageRating(avgRating)
                                     .favoriteCount(favoriteCount)
@@ -353,20 +314,20 @@ public class TrendingService {
                                     .rank(ranking.getRankPosition())
                                     .build();
                         } catch (Exception e) {
-                            log.error("Error mapping ranking {} to DTO: {}", ranking.getId(), e.getMessage(), e);
+                            log.error("Failed to map ranking item to DTO: {}", e.getMessage());
                             return null;
                         }
                     })
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("Error getting trending from DB: {}", e.getMessage(), e);
-            return List.of(); // Return empty list instead of null
+            log.error("Failed to retrieve trending from database: {}", e.getMessage(), e);
+            return List.of();
         }
     }
 
     /**
-     * Manual refresh
+     * Manually trigger a refresh for a specific trending period.
      */
     @Transactional
     public void manualRefresh(Ranking.RankingType rankingType) {
@@ -378,13 +339,13 @@ public class TrendingService {
     }
 
     /**
-     * Cleanup old rankings
+     * Cleanup historical rankings older than 90 days.
      */
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void cleanupOldRankings() {
         LocalDate cutoffDate = LocalDate.now().minusDays(90);
         rankingRepository.deleteOlderThan(cutoffDate);
-        log.info("Cleaned up rankings older than {}", cutoffDate);
+        log.info("Cleaned up historical rankings older than {}", cutoffDate);
     }
 }

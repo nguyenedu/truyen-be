@@ -14,13 +14,15 @@ import org.springframework.web.bind.annotation.*;
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    // Lấy thống kê dashboard (CHỈ ADMIN và SUPER_ADMIN)
+
+    /**
+     * Get platform statistics for dashboard.
+     */
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DashboardStatsResponse>> getDashboardStats(
-            @RequestParam(defaultValue = "month") String period
-    ) {
-        DashboardStatsResponse stats = dashboardService.getDashboardStats(period);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thống kê dashboard thành công", stats));
+            @RequestParam(defaultValue = "month") String period) {
+        return ResponseEntity.ok(ApiResponse.success("Dashboard statistics retrieved successfully",
+                dashboardService.getDashboardStats(period)));
     }
 }

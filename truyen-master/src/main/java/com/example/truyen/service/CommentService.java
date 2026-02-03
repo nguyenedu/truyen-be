@@ -15,7 +15,6 @@ import com.example.truyen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,60 +29,58 @@ public class CommentService {
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
 
-    // Lấy bình luận của truyện
+    /**
+     * Retrieve comments for a story with pagination, ordered by creation date
+     * (descending).
+     */
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByStoryId(Long storyId, int page, int size) {
-        // Kiểm tra truyện tồn tại
         storyRepository.findById(storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Truyện", "id", storyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Story", "id", storyId));
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Comment> comments = commentRepository.findByStoryIdOrderByCreatedAtDesc(storyId, pageable);
-        return comments.map(this::convertToResponse);
+        return commentRepository.findByStoryIdOrderByCreatedAtDesc(storyId, PageRequest.of(page, size))
+                .map(this::convertToResponse);
     }
 
-    // Lấy bình luận của chương
+    /**
+     * Retrieve comments for a specific chapter with pagination.
+     */
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByChapterId(Long chapterId, int page, int size) {
         chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chương", "id", chapterId));
+                .orElseThrow(() -> new ResourceNotFoundException("Chapter", "id", chapterId));
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Comment> comments = commentRepository.findByChapterIdOrderByCreatedAtDesc(chapterId, pageable);
-        return comments.map(this::convertToResponse);
+        return commentRepository.findByChapterIdOrderByCreatedAtDesc(chapterId, PageRequest.of(page, size))
+                .map(this::convertToResponse);
     }
 
-    // Tạo bình luận mới
+    /**
+     * Create a new comment linked to either a story or a chapter.
+     */
     @Transactional
     public CommentResponse createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
 
-        // Phải có ít nhất storyId hoặc chapterId
         if (request.getStoryId() == null && request.getChapterId() == null) {
-            throw new BadRequestException("Phải cung cấp Story ID hoặc Chapter ID");
+            throw new BadRequestException("Either Story ID or Chapter ID must be provided");
         }
 
         Story story = null;
         Chapter chapter = null;
 
-        // Kiểm tra storyId
         if (request.getStoryId() != null) {
             story = storyRepository.findById(request.getStoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Truyện", "id", request.getStoryId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Story", "id", request.getStoryId()));
         }
 
-        // Kiểm tra chapterId
         if (request.getChapterId() != null) {
             chapter = chapterRepository.findById(request.getChapterId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Chương", "id", request.getChapterId()));
-
-            // Nếu có chapterId thì lấy story từ chapter
+                    .orElseThrow(() -> new ResourceNotFoundException("Chapter", "id", request.getChapterId()));
             if (story == null) {
                 story = chapter.getStory();
             }
         }
 
-        // Tạo comment
         Comment comment = Comment.builder()
                 .user(currentUser)
                 .story(story)
@@ -92,68 +89,70 @@ public class CommentService {
                 .likesCount(0)
                 .build();
 
-        Comment savedComment = commentRepository.save(comment);
-        return convertToResponse(savedComment);
+        return convertToResponse(commentRepository.save(comment));
     }
 
-    // Cập nhật bình luận
+    /**
+     * Update comment content if user has ownership.
+     */
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentRequest request) {
         User currentUser = getCurrentUser();
-
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bình luận", "id", commentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
-        // Kiểm tra quyền sở hữu
         if (!comment.getUser().getId().equals(currentUser.getId())) {
-            throw new BadRequestException("Bạn không có quyền sửa bình luận này");
+            throw new BadRequestException("You do not have permission to edit this comment");
         }
 
-        // Cập nhật nội dung
         comment.setContent(request.getContent());
-
-        Comment updatedComment = commentRepository.save(comment);
-        return convertToResponse(updatedComment);
+        return convertToResponse(commentRepository.save(comment));
     }
 
-    // Xóa bình luận
+    /**
+     * Delete a comment if user has ownership or is an administrator.
+     */
     @Transactional
     public void deleteComment(Long commentId) {
         User currentUser = getCurrentUser();
-
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bình luận", "id", commentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
-        // Kiểm tra quyền sở hữu hoặc là ADMIN
-        if (!comment.getUser().getId().equals(currentUser.getId())
-                && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Bạn không có quyền xóa bình luận này");
+        if (!comment.getUser().getId().equals(currentUser.getId()) && !currentUser.getRole().equals(User.Role.ADMIN)) {
+            throw new BadRequestException("You do not have permission to delete this comment");
         }
 
         commentRepository.delete(comment);
     }
 
-    // Đếm số bình luận của truyện
+    /**
+     * Get total comment count for a story.
+     */
     @Transactional(readOnly = true)
     public Long countCommentsByStoryId(Long storyId) {
         return commentRepository.countByStoryId(storyId);
     }
 
-    // Đếm số bình luận của chương
+    /**
+     * Get total comment count for a chapter.
+     */
     @Transactional(readOnly = true)
     public Long countCommentsByChapterId(Long chapterId) {
         return commentRepository.countByChapterId(chapterId);
     }
 
-    // Lấy user hiện tại
+    /**
+     * Get current authenticated user from SecurityContext.
+     */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    // Convert Entity sang Response DTO
+    /**
+     * Map Comment entity to CommentResponse DTO.
+     */
     private CommentResponse convertToResponse(Comment comment) {
         return CommentResponse.builder()
                 .id(comment.getId())

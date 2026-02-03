@@ -19,7 +19,9 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    // Lấy tất cả thể loại
+    /**
+     * Retrieve all categories.
+     */
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
@@ -28,20 +30,23 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
-    // Lấy chi tiết 1 thể loại
+    /**
+     * Retrieve category details by ID.
+     */
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Thể loại", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
         return convertToResponse(category);
     }
 
-    // Tạo thể loại mới
+    /**
+     * Create a new category.
+     */
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
-        // Kiểm tra tên đã tồn tại
         if (categoryRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
+            throw new BadRequestException("Category '" + request.getName() + "' already exists");
         }
 
         Category category = Category.builder()
@@ -53,16 +58,17 @@ public class CategoryService {
         return convertToResponse(savedCategory);
     }
 
-    // Cập nhật thể loại
+    /**
+     * Update an existing category identifier by ID.
+     */
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Thể loại", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
 
-        // Kiểm tra tên mới có bị trùng không
         if (request.getName() != null && !category.getName().equals(request.getName())) {
             if (categoryRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
+                throw new BadRequestException("Category '" + request.getName() + "' already exists");
             }
             category.setName(request.getName());
         }
@@ -75,15 +81,19 @@ public class CategoryService {
         return convertToResponse(updatedCategory);
     }
 
-    // Xóa thể loại
+    /**
+     * Delete a category by ID.
+     */
     @Transactional
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Thể loại", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
         categoryRepository.delete(category);
     }
 
-    // Convert Entity sang Response DTO
+    /**
+     * Map Category entity to CategoryResponse DTO.
+     */
     private CategoryResponse convertToResponse(Category category) {
         return CategoryResponse.builder()
                 .id(category.getId())

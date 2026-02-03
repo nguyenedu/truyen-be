@@ -20,7 +20,9 @@ public class AuthorService {
 
     private final AuthorRepository authorRepository;
 
-    // Lấy tất cả tác giả
+    /**
+     * Retrieve all authors.
+     */
     @Transactional(readOnly = true)
     public List<AuthorResponse> getAllAuthors() {
         List<Author> authors = authorRepository.findAll();
@@ -29,20 +31,23 @@ public class AuthorService {
                 .collect(Collectors.toList());
     }
 
-    // Lấy chi tiết 1 tác giả
+    /**
+     * Retrieve author details by ID.
+     */
     @Transactional(readOnly = true)
     public AuthorResponse getAuthorById(Long id) {
         Author author = authorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tác giả", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Author", "id", id));
         return convertToResponse(author);
     }
 
-    // Tạo tác giả mới
+    /**
+     * Create a new author.
+     */
     @Transactional
     public AuthorResponse createAuthor(AuthorRequest request) {
-        // Kiểm tra tên đã tồn tại
         if (authorRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
+            throw new BadRequestException("Author '" + request.getName() + "' already exists");
         }
 
         Author author = Author.builder()
@@ -55,16 +60,17 @@ public class AuthorService {
         return convertToResponse(savedAuthor);
     }
 
-    // Cập nhật tác giả
+    /**
+     * Update an existing author's details.
+     */
     @Transactional
     public AuthorResponse updateAuthor(Long id, AuthorRequest request) {
         Author author = authorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tác giả", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Author", "id", id));
 
-        // Kiểm tra tên mới có bị trùng không
         if (request.getName() != null && !author.getName().equals(request.getName())) {
             if (authorRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
+                throw new BadRequestException("Author '" + request.getName() + "' already exists");
             }
             author.setName(request.getName());
         }
@@ -81,24 +87,26 @@ public class AuthorService {
         return convertToResponse(updatedAuthor);
     }
 
-    // Xóa tác giả
+    /**
+     * Delete an author by ID.
+     */
     @Transactional
     public void deleteAuthor(Long id) {
         Author author = authorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tác giả", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Author", "id", id));
         authorRepository.delete(author);
     }
 
-    // Tìm kiếm tác giả theo tên
+    /**
+     * Search authors by name containing keyword.
+     */
     @Transactional(readOnly = true)
     public List<AuthorResponse> searchAuthors(String name) {
         List<Author> authors;
 
         if (name == null || name.trim().isEmpty()) {
-            // Nếu không có từ khóa, trả về tất cả
             authors = authorRepository.findAll();
         } else {
-            // Tìm kiếm theo tên
             authors = authorRepository.findByNameContainingIgnoreCase(name.trim());
         }
 
@@ -107,7 +115,9 @@ public class AuthorService {
                 .collect(Collectors.toList());
     }
 
-    // Convert Entity sang Response DTO
+    /**
+     * Map Author entity to AuthorResponse DTO.
+     */
     private AuthorResponse convertToResponse(Author author) {
         return AuthorResponse.builder()
                 .id(author.getId())

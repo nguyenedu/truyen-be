@@ -29,53 +29,50 @@ public class DashboardService {
     private final AuthorRepository authorRepository;
     private final ActivityLogRepository activityLogRepository;
 
+    /**
+     * Retrieve aggregated dashboard statistics for a given period.
+     */
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats(String period) {
         DashboardStatsResponse stats = new DashboardStatsResponse();
 
-        // Xác định khoảng thời gian so sánh
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime currentPeriodStart;
         LocalDateTime previousPeriodStart;
         LocalDateTime previousPeriodEnd;
 
         if ("week".equalsIgnoreCase(period)) {
-            // Tuần này
             currentPeriodStart = now.minusDays(7);
             previousPeriodStart = now.minusDays(14);
             previousPeriodEnd = now.minusDays(7);
         } else {
-            // Tháng này (mặc định)
+            // Default: month
             currentPeriodStart = now.minusDays(30);
             previousPeriodStart = now.minusDays(60);
             previousPeriodEnd = now.minusDays(30);
         }
 
-        // === THỐNG KÊ TỔNG QUAN ===
+        // Summary Statistics
         stats.setTotalStories(storyRepository.count());
         stats.setTotalAuthors(authorRepository.count());
         stats.setTotalUsers(userRepository.count());
         stats.setTotalViews(getTotalViews());
 
-        // === SO SÁNH VỚI KỲ TRƯỚC ===
+        // Period Comparisons
         stats.setStoriesComparison(compareStories(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setAuthorsComparison(compareAuthors(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setUsersComparison(compareUsers(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setViewsComparison(compareViews(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
 
-        // === TOP TRUYỆN NHIỀU VIEW NHẤT ===
+        // Top Performers
         stats.setTopStoriesByViews(getTopStoriesByViews());
-
-        // === TOP TÁC GIẢ NHIỀU TRUYỆN NHẤT ===
         stats.setTopAuthorsByStories(getTopAuthorsByStories());
 
-        // === BIỂU ĐỒ TRUYỆN MỚI THEO NGÀY ===
+        // Charts
         stats.setNewStoriesChart(getNewStoriesChart(period));
-
-        // === BIỂU ĐỒ USER ĐĂNG KÝ MỚI ===
         stats.setNewUsersChart(getNewUsersChart(period));
 
-        // === HOẠT ĐỘNG GẦN ĐÂY ===
+        // Recent Activity
         stats.setRecentActivities(getRecentActivities());
 
         return stats;
@@ -124,10 +121,8 @@ public class DashboardService {
     }
 
     private StatsComparison compareViews(LocalDateTime currentStart, LocalDateTime prevStart, LocalDateTime prevEnd) {
-        // Tính tổng view trong kỳ hiện tại (giả sử)
         long currentViews = getTotalViews();
-        long previousViews = (long) (currentViews * 0.9); // Mock data
-
+        long previousViews = (long) (currentViews * 0.9); // Simulated data
         return calculateComparison(currentViews, previousViews);
     }
 
@@ -226,8 +221,7 @@ public class DashboardService {
 
     private List<RecentActivityDTO> getRecentActivities() {
         List<ActivityLog> activities = activityLogRepository.findAll(
-                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
-        ).getContent();
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
 
         return activities.stream()
                 .map(activity -> {
@@ -253,17 +247,20 @@ public class DashboardService {
                 .collect(Collectors.toList());
     }
 
-
     private String getTimeAgo(LocalDateTime dateTime) {
         Duration duration = Duration.between(dateTime, LocalDateTime.now());
         long minutes = duration.toMinutes();
         long hours = duration.toHours();
         long days = duration.toDays();
 
-        if (minutes < 1) return "Vừa xong";
-        if (minutes < 60) return minutes + " phút trước";
-        if (hours < 24) return hours + " giờ trước";
-        if (days < 30) return days + " ngày trước";
-        return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        if (minutes < 1)
+            return "Just now";
+        if (minutes < 60)
+            return minutes + " minutes ago";
+        if (hours < 24)
+            return hours + " hours ago";
+        if (days < 30)
+            return days + " days ago";
+        return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
 }

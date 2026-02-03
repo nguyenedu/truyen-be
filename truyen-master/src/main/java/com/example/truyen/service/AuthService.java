@@ -23,40 +23,41 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
-    private final TokenBlacklistService tokenBlacklistService;  // ⭐ THÊM
+    private final TokenBlacklistService tokenBlacklistService;
 
-    // Đăng nhập
+    /**
+     * Authenticate user and generate JWT token.
+     */
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
-                        request.getPassword()
-                )
-        );
+                        request.getPassword()));
 
         String token = jwtTokenProvider.generateToken(authentication);
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BadRequestException("User không tồn tại"));
+                .orElseThrow(() -> new BadRequestException("User does not exist"));
 
         return new AuthResponse(
                 token,
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole().name()
-        );
+                user.getRole().name());
     }
 
-    // Đăng ký
+    /**
+     * Register a new user with default role.
+     */
     @Transactional
     public String register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username đã tồn tại");
+            throw new BadRequestException("Username already exists");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email đã tồn tại");
+            throw new BadRequestException("Email already exists");
         }
 
         User user = User.builder()
@@ -70,22 +71,20 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return "Đăng ký thành công";
+        return "Registration successful";
     }
 
-    // ⭐ THÊM METHOD MỚI: Logout với blacklist
+    /**
+     * Logout user by blacklisting the current JWT token.
+     */
     @Transactional
     public String logout(String token) {
         try {
-            // Lấy expiration time của token
             long expirationTime = jwtTokenProvider.getExpirationTimeMillis(token);
-
-            // Thêm token vào blacklist
             tokenBlacklistService.blacklistToken(token, expirationTime);
-
-            return "Đăng xuất thành công";
+            return "Logout successful";
         } catch (Exception e) {
-            throw new BadRequestException("Token không hợp lệ");
+            throw new BadRequestException("Invalid token");
         }
     }
 }

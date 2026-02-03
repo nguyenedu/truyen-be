@@ -14,116 +14,112 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+
 @CrossOrigin(origins = "http://localhost:5174")
 @RestController
 @RequestMapping("/api/authors")
 @RequiredArgsConstructor
-public class    AuthorController {
+public class AuthorController {
 
     private final AuthorService authorService;
     private final MinIoService minIoService;
 
-    // Lấy tất cả tác giả
+    /**
+     * Get all authors.
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> getAllAuthors() {
-        List<AuthorResponse> authors = authorService.getAllAuthors();
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tác giả thành công", authors));
+        return ResponseEntity.ok(ApiResponse.success("Authors retrieved successfully", authorService.getAllAuthors()));
     }
 
-    // Lấy chi tiết 1 tác giả
+    /**
+     * Get author details by ID.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AuthorResponse>> getAuthorById(@PathVariable Long id) {
-        AuthorResponse author = authorService.getAuthorById(id);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tác giả thành công", author));
+        return ResponseEntity.ok(ApiResponse.success("Author retrieved successfully", authorService.getAuthorById(id)));
     }
 
-    // Tạo tác giả mới với avatar (multipart/form-data)
-    @PostMapping(consumes = {"multipart/form-data"})
+    /**
+     * Create author with avatar (Multipart).
+     */
+    @PostMapping(consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> createAuthorWithAvatar(
             @RequestParam String name,
             @RequestParam(required = false) String bio,
-            @RequestParam(required = false) MultipartFile avatar
-    ) {
-        // Upload avatar nếu có
-        String avatarUrl = null;
-        if (avatar != null && !avatar.isEmpty()) {
-            avatarUrl = minIoService.uploadFile(avatar, "avatars");
-        }
+            @RequestParam(required = false) MultipartFile avatar) {
+        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar, "avatars") : null;
 
-        // Tạo request DTO
         AuthorRequest request = new AuthorRequest();
         request.setName(name);
         request.setBio(bio);
         request.setAvatar(avatarUrl);
 
-        AuthorResponse author = authorService.createAuthor(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo tác giả thành công", author));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Author created successfully", authorService.createAuthor(request)));
     }
 
-    // Tạo tác giả mới (JSON - giữ lại endpoint cũ)
-    @PostMapping(consumes = {"application/json"})
+    /**
+     * Create author (JSON).
+     */
+    @PostMapping(consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<AuthorResponse>> createAuthor(
-            @Valid @RequestBody AuthorRequest request
-    ) {
-        AuthorResponse author = authorService.createAuthor(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo tác giả thành công", author));
+    public ResponseEntity<ApiResponse<AuthorResponse>> createAuthor(@Valid @RequestBody AuthorRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Author created successfully", authorService.createAuthor(request)));
     }
 
-    // Cập nhật tác giả với avatar (multipart/form-data)
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    /**
+     * Update author with avatar (Multipart).
+     */
+    @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> updateAuthorWithAvatar(
             @PathVariable Long id,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String bio,
-            @RequestParam(required = false) MultipartFile avatar
-    ) {
-        // Upload avatar mới nếu có
-        String avatarUrl = null;
-        if (avatar != null && !avatar.isEmpty()) {
-            avatarUrl = minIoService.uploadFile(avatar, "avatars");
-        }
+            @RequestParam(required = false) MultipartFile avatar) {
+        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar, "avatars") : null;
 
         AuthorRequest request = new AuthorRequest();
         request.setName(name);
         request.setBio(bio);
         request.setAvatar(avatarUrl);
 
-        AuthorResponse author = authorService.updateAuthor(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật tác giả thành công", author));
+        return ResponseEntity
+                .ok(ApiResponse.success("Author updated successfully", authorService.updateAuthor(id, request)));
     }
 
-    // Cập nhật tác giả (JSON - giữ lại endpoint cũ)
-    @PutMapping(value = "/{id}", consumes = {"application/json"})
+    /**
+     * Update author (JSON).
+     */
+    @PutMapping(value = "/{id}", consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> updateAuthor(
             @PathVariable Long id,
-            @Valid @RequestBody AuthorRequest request
-    ) {
-        AuthorResponse author = authorService.updateAuthor(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật tác giả thành công", author));
+            @Valid @RequestBody AuthorRequest request) {
+        return ResponseEntity
+                .ok(ApiResponse.success("Author updated successfully", authorService.updateAuthor(id, request)));
     }
 
-    // Xóa tác giả (CHỈ ADMIN và SUPER_ADMIN)
+    /**
+     * Delete an author.
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteAuthor(@PathVariable Long id) {
         authorService.deleteAuthor(id);
-        return ResponseEntity.ok(ApiResponse.success("Xóa tác giả thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Author deleted successfully", null));
     }
 
-    // Tìm kiếm tác giả theo tên
+    /**
+     * Search authors by name.
+     */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> searchAuthors(
-            @RequestParam(required = false) String name
-    ) {
-        List<AuthorResponse> authors = authorService.searchAuthors(name);
-        return ResponseEntity.ok(ApiResponse.success("Tìm kiếm tác giả thành công", authors));
+            @RequestParam(required = false) String name) {
+        return ResponseEntity
+                .ok(ApiResponse.success("Search completed successfully", authorService.searchAuthors(name)));
     }
 }

@@ -21,8 +21,8 @@ public class StoryViewService {
     private final StoryRepository storyRepository;
 
     /**
-     * Track view khi user đọc chapter
-     * Chạy async để không chặn response
+     * trackView increments view counts and tracks unique viewers for a given story.
+     * Executed asynchronously to prevent blocking the response.
      */
     @Async
     @Transactional
@@ -30,7 +30,7 @@ public class StoryViewService {
         try {
             String today = LocalDate.now().toString();
 
-            // 1. Tăng view count hôm nay
+            // 1. Increment today's view count
             String viewKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
             Long currentViews = redisTemplate.opsForValue().increment(viewKey, 1);
             redisTemplate.expire(viewKey, Duration.ofDays(1));
@@ -42,26 +42,26 @@ public class StoryViewService {
                 redisTemplate.expire(viewerKey, Duration.ofDays(1));
             }
 
-            // 3. Lưu views theo ngày
+            // 3. Increment historical view count by date
             String dateViewKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
             redisTemplate.opsForValue().increment(dateViewKey, 1);
             redisTemplate.expire(dateViewKey, Duration.ofDays(35));
 
-            // 4. Sync vào DB mỗi 10 views
+            // 4. Batch sync to database for every 10 views
             if (currentViews != null && currentViews % 10 == 0) {
                 storyRepository.incrementTotalViews(storyId, 10);
-                log.debug("Synced 10 views to DB for story {}", storyId);
+                log.debug("Synced 10 views to database for story ID: {}", storyId);
             }
 
-            log.debug("Tracked view for story {} by user {} from {}", storyId, userId, ipAddress);
+            log.debug("View tracked for story ID: {} by user ID: {} from IP: {}", storyId, userId, ipAddress);
 
         } catch (Exception e) {
-            log.error("Error tracking view for story {}: {}", storyId, e.getMessage());
+            log.error("Failed to track view for story ID: {}: {}", storyId, e.getMessage());
         }
     }
 
     /**
-     * Lấy số views trong N ngày gần đây
+     * Retrieve aggregate view count for the last N days.
      */
     public Long getRecentViews(Long storyId, int days) {
         long totalViews = 0;
@@ -81,7 +81,7 @@ public class StoryViewService {
     }
 
     /**
-     * Lấy số unique viewers hôm nay
+     * Retrieve the number of unique viewers for today.
      */
     public Long getUniqueViewersToday(Long storyId) {
         String key = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
@@ -90,7 +90,7 @@ public class StoryViewService {
     }
 
     /**
-     * Lấy views hôm nay
+     * Retrieve total views for today.
      */
     public Long getViewsToday(Long storyId) {
         String key = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
@@ -99,8 +99,8 @@ public class StoryViewService {
     }
 
     /**
-     * Sync tất cả views từ Redis vào DB
-     * Chạy cuối ngày
+     * Synchronize all remaining view counts from Redis to the database.
+     * Intended for end-of-day synchronization.
      */
     @Transactional
     public void syncAllViewsToDatabase() {
@@ -123,13 +123,13 @@ public class StoryViewService {
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Error syncing views for key {}: {}", key, e.getMessage());
+                        log.error("Failed to sync views for key {}: {}", key, e.getMessage());
                     }
                 }
-                log.info("Synced all views to database");
+                log.info("Successfully synchronized all views from Redis to database");
             }
         } catch (Exception e) {
-            log.error("Error in syncAllViewsToDatabase: {}", e.getMessage());
+            log.error("Error during syncAllViewsToDatabase: {}", e.getMessage());
         }
     }
 }

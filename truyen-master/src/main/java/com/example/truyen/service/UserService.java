@@ -26,15 +26,17 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Lấy tất cả users
+    /**
+     * Retrieve all users with pagination.
+     */
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<User> users = userRepository.findAll(pageable);
-        return users.map(this::convertToResponse);
+        return userRepository.findAll(PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
-    // Lấy chi tiết user theo ID
+    /**
+     * Retrieve user details by ID.
+     */
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
@@ -42,176 +44,163 @@ public class UserService {
         return convertToResponse(user);
     }
 
-    // Lấy thông tin cuar user hiện tại
+    /**
+     * Retrieve profile of the currently authenticated user.
+     */
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser() {
-        User currentUser = getCurrentUserEntity();
-        return convertToResponse(currentUser);
+        return convertToResponse(getCurrentUserEntity());
     }
 
-
-    // Cập nhật thông tin user - Method này thay thế cho method updateUser hiện tại
+    /**
+     * Update user details. Access restricted to the user themselves or
+     * administrators.
+     */
     @Transactional
     public UserResponse updateUser(Long id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
-        // Kiểm tra quyền
         User currentUser = getCurrentUserEntity();
         if (!currentUser.getId().equals(id) &&
                 !currentUser.getRole().equals(User.Role.SUPER_ADMIN) &&
                 !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Bạn không có quyền cập nhật thông tin user này");
+            throw new BadRequestException("You do not have permission to update this user's information");
         }
 
-        // Cập nhật fullname
         if (request.getFullname() != null) {
             user.setFullname(request.getFullname());
         }
 
-        // Cập nhật email
         if (request.getEmail() != null && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new BadRequestException("Email đã tồn tại");
+                throw new BadRequestException("Email already exists");
             }
             user.setEmail(request.getEmail());
         }
 
-        // Cập nhật avatar
         if (request.getAvatar() != null) {
             user.setAvatar(request.getAvatar());
         }
 
-        // Cập nhật phone
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
 
-        // Cập nhật password nếu có
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
-        // Chỉ SUPER_ADMIN và ADMIN mới có thể kích hoạt/vô hiệu hóa tài khoản
+        // Only SUPER_ADMIN and ADMIN can enable/disable accounts
         if (request.getIsActive() != null &&
                 (currentUser.getRole().equals(User.Role.SUPER_ADMIN) ||
                         currentUser.getRole().equals(User.Role.ADMIN))) {
             user.setIsActive(request.getIsActive());
         }
 
-        User updatedUser = userRepository.save(user);
-        return convertToResponse(updatedUser);
+        return convertToResponse(userRepository.save(user));
     }
 
-    // Thay đổi role của user (CHỈ SUPER_ADMIN)
+    /**
+     * Change user role. Restricted to SUPER_ADMIN.
+     */
     @Transactional
     public UserResponse changeUserRole(ChangeRoleRequest request) {
         User currentUser = getCurrentUserEntity();
 
-        // Kiểm tra quyền SUPER_ADMIN
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Chỉ SUPER_ADMIN mới có quyền thay đổi role");
+            throw new BadRequestException("Only SUPER_ADMIN has permission to change roles");
         }
 
-        // Tìm user cần thay đổi role
         User targetUser = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getUserId()));
 
-        // Không được thay đổi role của chính mình
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("Không thể thay đổi role của chính mình");
+            throw new BadRequestException("You cannot change your own role");
         }
 
-        // Không được thay đổi role của SUPER_ADMIN khác
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Không thể thay đổi role của SUPER_ADMIN");
+            throw new BadRequestException("Cannot change the role of another SUPER_ADMIN");
         }
 
-        // Parse và validate role
         User.Role newRole;
         try {
             newRole = User.Role.valueOf(request.getRole().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Role không hợp lệ: " + request.getRole());
+            throw new BadRequestException("Invalid role: " + request.getRole());
         }
 
-        // Không cho phép tạo SUPER_ADMIN mới
         if (newRole.equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Không thể gán role SUPER_ADMIN");
+            throw new BadRequestException("Cannot assign SUPER_ADMIN role");
         }
 
-        // Thay đổi role
         targetUser.setRole(newRole);
-        User updatedUser = userRepository.save(targetUser);
-
-        return convertToResponse(updatedUser);
+        return convertToResponse(userRepository.save(targetUser));
     }
 
-    // Ban, Unban tài khoản (CHỈ SUPER_ADMIN và ADMIN) (2 trạng thái riêng biệt)
+    /**
+     * Toggle user active status (Ban/Unban). Restricted to SUPER_ADMIN and ADMIN.
+     */
     @Transactional
     public UserResponse toggleUserStatus(Long userId) {
         User currentUser = getCurrentUserEntity();
 
-        // Kiểm tra quyền SUPER_ADMIN và ADMIN
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN) && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Chỉ SUPER_ADMIN và ADMIN mới có quyền thay đổi trạng thái tài khoản");
+            throw new BadRequestException("Only SUPER_ADMIN and ADMIN have permission to change account status");
         }
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        // Không được ban chính mình
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("Không thể thay đổi trạng thái của chính mình");
+            throw new BadRequestException("You cannot change your own status");
         }
 
-        // Không được ban SUPER_ADMIN khác
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Không thể thay đổi trạng thái của SUPER_ADMIN");
+            throw new BadRequestException("Cannot change the status of a SUPER_ADMIN");
         }
-        //Không được ban ADMIN khác
+
         if (currentUser.getRole().equals(User.Role.ADMIN) &&
                 targetUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("ADMIN không thể ban ADMIN khác");
+            throw new BadRequestException("ADMIN cannot ban another ADMIN");
         }
 
         targetUser.setIsActive(!targetUser.getIsActive());
-        User updatedUser = userRepository.save(targetUser);
-
-        return convertToResponse(updatedUser);
+        return convertToResponse(userRepository.save(targetUser));
     }
 
-    // Xóa user (CHỈ SUPER_ADMIN và ADMIN)
+    /**
+     * Delete a user. Restricted to SUPER_ADMIN and ADMIN.
+     */
     @Transactional
     public void deleteUser(Long userId) {
         User currentUser = getCurrentUserEntity();
 
-        // Kiểm tra quyền SUPER_ADMIN và ADMIN
         if (!currentUser.getRole().equals(User.Role.SUPER_ADMIN) && !currentUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("Chỉ SUPER_ADMIN và ADMIN mới có quyền xóa user");
+            throw new BadRequestException("Only SUPER_ADMIN and ADMIN have permission to delete users");
         }
 
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        // Không được xóa chính mình
         if (targetUser.getId().equals(currentUser.getId())) {
-            throw new BadRequestException("Không thể xóa chính mình");
+            throw new BadRequestException("You cannot delete yourself");
         }
 
-        // Không được xóa SUPER_ADMIN khác
         if (targetUser.getRole().equals(User.Role.SUPER_ADMIN)) {
-            throw new BadRequestException("Không thể xóa SUPER_ADMIN");
+            throw new BadRequestException("Cannot delete a SUPER_ADMIN");
         }
-        // Không được xóa ADMIN khác
+
         if (currentUser.getRole().equals(User.Role.ADMIN) &&
                 targetUser.getRole().equals(User.Role.ADMIN)) {
-            throw new BadRequestException("ADMIN không thể xóa ADMIN khác");
+            throw new BadRequestException("ADMIN cannot delete another ADMIN");
         }
         userRepository.delete(targetUser);
     }
 
-    // Đếm số lượng users theo role
+    /**
+     * Count users belonging to a specific role.
+     */
     @Transactional(readOnly = true)
     public long countUsersByRole(String role) {
         try {
@@ -220,19 +209,21 @@ public class UserService {
                     .filter(u -> u.getRole().equals(userRole))
                     .count();
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Role không hợp lệ: " + role);
+            throw new BadRequestException("Invalid role: " + role);
         }
     }
 
+    /**
+     * Create a new user with default USER role.
+     */
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Username đã tồn tại");
+            throw new BadRequestException("Username already exists");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email đã tồn tại");
+            throw new BadRequestException("Email already exists");
         }
 
         User user = User.builder()
@@ -244,50 +235,37 @@ public class UserService {
                 .role(User.Role.USER)
                 .isActive(true)
                 .build();
-        return mapToResponse(userRepository.save(user));
+        return convertToResponse(userRepository.save(user));
     }
 
-    //getCurrentUserEntity
+    /**
+     * Retrieve the current authenticated user entity.
+     */
     private User getCurrentUserEntity() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    // Tìm kiếm users với pagination
+    /**
+     * Search users by keyword with pagination and sorting.
+     */
     @Transactional(readOnly = true)
     public Page<UserResponse> searchUsers(String keyword, int page, int size, String sortField, String sortDir) {
-        // Xử lý sort
         Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
 
-        // Nếu keyword trống, trả về tất cả
         if (keyword == null || keyword.trim().isEmpty()) {
-            Page<User> users = userRepository.findAll(pageable);
-            return users.map(this::convertToResponse);
+            return userRepository.findAll(pageable).map(this::convertToResponse);
         }
 
-        // Tìm kiếm theo keyword
-        Page<User> users = userRepository.searchUsers(keyword.trim(), pageable);
-        return users.map(this::convertToResponse);
+        return userRepository.searchUsers(keyword.trim(), pageable).map(this::convertToResponse);
     }
 
+    /**
+     * Map User entity to UserResponse DTO.
+     */
     private UserResponse convertToResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .fullname(user.getFullname())
-                .avatar(user.getAvatar())
-                .phone(user.getPhone())
-                .role(user.getRole().name())
-                .isActive(user.getIsActive())
-                .createdAt(user.getCreatedAt())
-                .build();
-    }
-
-    private UserResponse mapToResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())

@@ -1,6 +1,5 @@
 package com.example.truyen.controller;
 
-
 import com.example.truyen.service.MinIoService;
 import com.example.truyen.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +19,14 @@ public class UploadFileController {
 
     private final MinIoService minIoService;
 
+    /**
+     * Upload a file to a specified folder (defaults to 'images').
+     */
     @PostMapping("/upload")
     public ResponseEntity<?> upload(
             @RequestParam MultipartFile file,
-            @RequestParam (defaultValue = "images") String folder
-    ){
+            @RequestParam(defaultValue = "images") String folder) {
         String url = minIoService.uploadFile(file, folder);
-        return ResponseEntity.ok(Map.of("url",url));
+        return ResponseEntity.ok(Map.of("url", url));
     }
-
 }

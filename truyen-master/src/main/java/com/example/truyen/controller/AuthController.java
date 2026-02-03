@@ -19,32 +19,34 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // API Đăng nhập
+    /**
+     * Authenticate user and return token.
+     */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", response));
+        return ResponseEntity.ok(ApiResponse.success("Login successful", authService.login(request)));
     }
 
-
+    /**
+     * Register a new user.
+     */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
-        String message = authService.register(request);
-        return ResponseEntity.ok(ApiResponse.success(message, null));
+        return ResponseEntity.ok(ApiResponse.success(authService.register(request), null));
     }
 
+    /**
+     * Log out current user by invalidating token.
+     */
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
 
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            String token = bearerToken.substring(7);
-            String message = authService.logout(token);
-            return ResponseEntity.ok(ApiResponse.success(message, null));
+            return ResponseEntity.ok(ApiResponse.success(authService.logout(bearerToken.substring(7)), null));
         }
 
-        return ResponseEntity.badRequest()
-                .body(ApiResponse.error("Token không hợp lệ"));
+        return ResponseEntity.badRequest().body(ApiResponse.error("Invalid token"));
     }
 }

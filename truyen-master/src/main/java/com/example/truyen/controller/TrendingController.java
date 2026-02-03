@@ -24,7 +24,7 @@ import java.util.List;
 @RequestMapping("/api/trending")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5174", "http://localhost:5175", "http://localhost:5176"})
+@CrossOrigin(origins = { "http://localhost:5174", "http://localhost:5175", "http://localhost:5176" })
 public class TrendingController {
 
     private final TrendingService trendingService;
@@ -35,10 +35,7 @@ public class TrendingController {
     private final CommentRepository commentRepository;
 
     /**
-     * GET /api/trending?t=DAILY&limit=12
-     * GET /api/trending?type=DAILY&limit=12
-     *
-     * Support cả 2 format: 't' và 'type'
+     * Get trending stories by type (DAILY, WEEKLY, MONTHLY).
      */
     @GetMapping
     public ResponseEntity<List<StoryTrendingDTO>> getTrending(
@@ -47,18 +44,15 @@ public class TrendingController {
             @RequestParam(defaultValue = "20") int limit) {
 
         try {
-            // Xử lý parameter 't' hoặc 'type'
             String typeString = tParam != null ? tParam : typeParam;
 
-            // Default to DAILY if no param provided
             if (typeString == null || typeString.isEmpty()) {
                 typeString = "DAILY";
             }
 
-            // Remove prefix "e-" if exists (from frontend: t=e-WEEKLY)
+            // Standardize type string
             typeString = typeString.replace("e-", "").toUpperCase();
 
-            // Parse to enum
             Ranking.RankingType type;
             try {
                 type = Ranking.RankingType.valueOf(typeString);
@@ -67,23 +61,17 @@ public class TrendingController {
                 type = Ranking.RankingType.DAILY;
             }
 
-            log.info("Getting trending: type={}, limit={}", type, limit);
-
-            List<StoryTrendingDTO> trending = trendingService.getTrending(type, limit);
-
-            log.info("Successfully retrieved {} trending stories", trending.size());
-
-            return ResponseEntity.ok(trending);
+            log.info("Fetching trending: count={}, type={}", limit, type);
+            return ResponseEntity.ok(trendingService.getTrending(type, limit));
 
         } catch (Exception e) {
-            log.error("Error getting trending stories", e);
-            // Return empty list instead of error to prevent frontend crash
+            log.error("Failed to fetch trending stories", e);
             return ResponseEntity.ok(List.of());
         }
     }
 
     /**
-     * POST /api/trending/stories/{id}/view?userId=123
+     * Track a story view for a specific user.
      */
     @PostMapping("/stories/{id}/view")
     public ResponseEntity<String> trackViewSimple(
@@ -92,55 +80,49 @@ public class TrendingController {
             HttpServletRequest request) {
 
         try {
-            String ipAddress = request.getRemoteAddr();
-            viewService.trackView(id, userId, ipAddress);
-            return ResponseEntity.ok("View tracked successfully");
+            viewService.trackView(id, userId, request.getRemoteAddr());
+            return ResponseEntity.ok("View tracked");
         } catch (Exception e) {
-            log.error("Error tracking view for story {}", id, e);
-            return ResponseEntity.ok("View tracking failed");
+            log.error("Failed to track view for story: {}", id, e);
+            return ResponseEntity.ok("Tracking failed");
         }
     }
 
+    /**
+     * Track a story view via request body.
+     */
     @PostMapping("/track")
     public ResponseEntity<String> trackView(
             @Valid @RequestBody TrackViewRequest requestDto,
             HttpServletRequest request) {
 
         try {
-            String ipAddress = request.getRemoteAddr();
-            viewService.trackView(requestDto.getStoryId(), requestDto.getUserId(), ipAddress);
-
-            log.info("Tracked view for story {} by user {}",
-                    requestDto.getStoryId(), requestDto.getUserId());
-
-            return ResponseEntity.ok("View tracked successfully");
+            viewService.trackView(requestDto.getStoryId(), requestDto.getUserId(), request.getRemoteAddr());
+            return ResponseEntity.ok("View tracked");
         } catch (Exception e) {
-            log.error("Error tracking view", e);
-            return ResponseEntity.ok("View tracking failed");
+            log.error("Failed to track view", e);
+            return ResponseEntity.ok("Tracking failed");
         }
     }
 
     /**
-     * POST /api/trending/refresh?type=DAILY
-     * Manual refresh (for admin/testing)
+     * Manually refresh trending cache for a specific type.
      */
     @PostMapping("/refresh")
     public ResponseEntity<String> manualRefresh(
             @RequestParam(defaultValue = "DAILY") Ranking.RankingType type) {
 
         try {
-            log.info("Manual refresh triggered for {}", type);
             trendingService.manualRefresh(type);
-            return ResponseEntity.ok("Trending refreshed for " + type);
+            return ResponseEntity.ok("Trending refreshed: " + type);
         } catch (Exception e) {
-            log.error("Error refreshing trending for {}", type, e);
+            log.error("Failed to refresh trending: {}", type, e);
             return ResponseEntity.status(500).body("Refresh failed: " + e.getMessage());
         }
     }
 
     /**
-     * GET /api/trending/stats/{storyId}
-     * Xem stats chi tiết của 1 truyện
+     * Get detailed statistics for a specific story.
      */
     @GetMapping("/stats/{storyId}")
     public ResponseEntity<?> getStoryStats(@PathVariable Long storyId) {
@@ -165,7 +147,7 @@ public class TrendingController {
 
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            log.error("Error getting stats for story {}", storyId, e);
+            log.error("Failed to fetch stats for story: {}", storyId, e);
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
