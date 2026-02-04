@@ -13,10 +13,15 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -86,5 +91,41 @@ public class AuthService {
         } catch (Exception e) {
             throw new BadRequestException("Mã thông báo không hợp lệ");
         }
+    }
+
+    /**
+     * Tạo mã thông báo khôi phục mật khẩu.
+     */
+    @Transactional
+    public String generateResetToken(String email) {
+        log.debug("Generating reset token for email: {}", email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy người dùng với email này"));
+
+        String token = UUID.randomUUID().toString();
+        user.setResetPasswordToken(token);
+        user.setResetPasswordTokenExpiry(LocalDateTime.now().plusMinutes(30));
+        userRepository.save(user);
+
+        log.debug("Generated token for {}: {}", email, token);
+        return token;
+    }
+
+    /**
+     * Đặt lại mật khẩu mới bằng mã thông báo.
+     */
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new BadRequestException("Mã khôi phục không hợp lệ hoặc đã qua sử dụng"));
+
+        if (user.getResetPasswordTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Mã khôi phục đã hết hạn");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiry(null);
+        userRepository.save(user);
     }
 }

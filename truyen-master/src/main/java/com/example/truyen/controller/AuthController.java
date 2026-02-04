@@ -1,5 +1,7 @@
 package com.example.truyen.controller;
 
+import com.example.truyen.dto.request.ForgotPasswordRequest;
+import com.example.truyen.dto.request.ResetPasswordRequest;
 import com.example.truyen.dto.request.LoginRequest;
 import com.example.truyen.dto.request.RegisterRequest;
 import com.example.truyen.dto.response.ApiResponse;
@@ -48,5 +50,23 @@ public class AuthController {
         }
 
         return ResponseEntity.badRequest().body(ApiResponse.error("Token không hợp lệ"));
+    }
+
+    /**
+     * Yêu cầu khôi phục mật khẩu.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String token = authService.generateResetToken(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("Mã khôi phục đã được tạo", token));
+    }
+
+    /**
+     * Đặt lại mật khẩu.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công", null));
     }
 }
