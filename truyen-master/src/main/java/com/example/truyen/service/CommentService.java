@@ -8,10 +8,7 @@ import com.example.truyen.entity.Story;
 import com.example.truyen.entity.User;
 import com.example.truyen.exception.BadRequestException;
 import com.example.truyen.exception.ResourceNotFoundException;
-import com.example.truyen.repository.ChapterRepository;
-import com.example.truyen.repository.CommentRepository;
-import com.example.truyen.repository.StoryRepository;
-import com.example.truyen.repository.UserRepository;
+import com.example.truyen.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,12 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class CommentService {
 
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
+    private final CommentLikeRepository commentLikeRepository;
 
     /**
      * Lấy danh sách bình luận của truyện với phân trang, sắp xếp theo ngày tạo
@@ -114,15 +113,29 @@ public class CommentService {
      */
     @Transactional
     public void deleteComment(Long commentId) {
+        log.debug("Attempting to delete comment with ID: {}", commentId);
         User currentUser = getCurrentUser();
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
-        if (!comment.getUser().getId().equals(currentUser.getId()) && !currentUser.getRole().equals(User.Role.ADMIN)) {
+        boolean isAdmin = currentUser.getRole().equals(User.Role.ADMIN)
+                || currentUser.getRole().equals(User.Role.SUPER_ADMIN);
+
+        log.debug("User {} (role: {}) is attempting to delete comment by {}",
+                currentUser.getUsername(), currentUser.getRole(), comment.getUser().getUsername());
+
+        if (!comment.getUser().getId().equals(currentUser.getId()) && !isAdmin) {
+            log.warn("User {} does not have permission to delete comment {}", currentUser.getUsername(), commentId);
             throw new BadRequestException("Bạn không có quyền xóa bình luận này");
         }
 
+        // Xóa tất cả lượt thích liên quan đến bình luận này trước khi xóa bình luận để
+        // tránh lỗi FK
+        commentLikeRepository.deleteByCommentId(commentId);
+        log.debug("Deleted likes for comment {}", commentId);
+
         commentRepository.delete(comment);
+        log.debug("Successfully deleted comment {}", commentId);
     }
 
     /**
@@ -154,6 +167,20 @@ public class CommentService {
      * Chuyển đổi Comment sang CommentResponse DTO.
      */
     private CommentResponse convertToResponse(Comment comment) {
+        boolean isLiked = false;
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+                User currentUser = userRepository.findByUsername(auth.getName()).orElse(null);
+                if (currentUser != null) {
+                    isLiked = commentLikeRepository.existsByUserIdAndCommentId(currentUser.getId(), comment.getId());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error checking like status: {}", e.getMessage());
+        }
+
         return CommentResponse.builder()
                 .id(comment.getId())
                 .userId(comment.getUser().getId())
@@ -167,6 +194,7 @@ public class CommentService {
                 .likesCount(comment.getLikesCount())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
+                .isLiked(isLiked)
                 .build();
     }
 }

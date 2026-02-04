@@ -59,7 +59,7 @@ public class CommentController {
     @PutMapping("/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> updateComment(
-            @PathVariable Long commentId,
+            @PathVariable("commentId") Long commentId,
             @Valid @RequestBody CommentRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật bình luận thành công",
                 commentService.updateComment(commentId, request)));
@@ -70,7 +70,7 @@ public class CommentController {
      */
     @DeleteMapping("/{commentId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<String>> deleteComment(@PathVariable Long commentId) {
+    public ResponseEntity<ApiResponse<String>> deleteComment(@PathVariable("commentId") Long commentId) {
         commentService.deleteComment(commentId);
         return ResponseEntity.ok(ApiResponse.success("Xóa bình luận thành công", null));
     }

@@ -24,4 +24,5 @@ public class CommentResponse {
     private Integer likesCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isLiked;
 }
