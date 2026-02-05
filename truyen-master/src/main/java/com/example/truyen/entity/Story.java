@@ -53,11 +53,7 @@ public class Story {
     private Boolean isHot = false;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "story_categories",
-            joinColumns = @JoinColumn(name = "story_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
+    @JoinTable(name = "story_categories", joinColumns = @JoinColumn(name = "story_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     @Builder.Default
     private Set<Category> categories = new HashSet<>();
 
@@ -68,6 +64,30 @@ public class Story {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Chapter> chapters = new HashSet<>();
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Comment> comments = new HashSet<>();
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Favorite> favorites = new HashSet<>();
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Rating> ratings = new HashSet<>();
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<ReadingHistory> readingHistories = new HashSet<>();
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Ranking> rankings = new HashSet<>();
 
     public enum Status {
         ONGOING, COMPLETED, PAUSED, DRAFT, PRIVATE
