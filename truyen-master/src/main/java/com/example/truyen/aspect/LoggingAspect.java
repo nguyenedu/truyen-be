@@ -29,10 +29,10 @@ public class LoggingAspect {
 
     private final ActivityLogService activityLogService;
 
-
-    @Pointcut       ("execution(* com.example.truyen.service..*(..)) && " +
+    @Pointcut("execution(* com.example.truyen.service..*(..)) && " +
             "!execution(* com.example.truyen.service.ActivityLogService.*(..))")
-    public void serviceLayer() {}
+    public void serviceLayer() {
+    }
 
     @Around("serviceLayer()")
     public Object logServiceMethods(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -73,19 +73,21 @@ public class LoggingAspect {
                             ? resultJson.substring(0, 200) + "..."
                             : resultJson);
 
-            // Tạo activity log
-            ActivityLog activityLog = ActivityLog.builder()
-                    .userId(userId)
-                    .action(fullMethodName)
-                    .tableName(extractTableName(className))
-                    .recordId(extractRecordId(result, args))
-                    .description(buildDescription(methodName, parameters, resultJson, executionTime))
-                    .ipAddress(ipAddress)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            // Chỉ lưu activity log nếu là hành động đáng kể
+            if (isSignificantAction(methodName, className)) {
+                ActivityLog activityLog = ActivityLog.builder()
+                        .userId(userId)
+                        .action(fullMethodName)
+                        .tableName(extractTableName(className))
+                        .recordId(extractRecordId(result, args))
+                        .description(buildDescription(methodName, parameters, resultJson, executionTime))
+                        .ipAddress(ipAddress)
+                        .createdAt(LocalDateTime.now())
+                        .build();
 
-            // Lưu vào database
-            activityLogService.saveLog(activityLog);
+                // Lưu vào database
+                activityLogService.saveLog(activityLog);
+            }
 
             return result;
 
@@ -96,23 +98,82 @@ public class LoggingAspect {
             log.error("!!! {} - Time: {}ms - Error: {}",
                     fullMethodName, executionTime, e.getMessage());
 
-            // Lưu log lỗi
-            ActivityLog activityLog = ActivityLog.builder()
-                    .userId(userId)
-                    .action(fullMethodName)
-                    .tableName(extractTableName(className))
-                    .recordId(null)
-                    .description(buildErrorDescription(methodName, parameters, e.getMessage(), executionTime))
-                    .ipAddress(ipAddress)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            // Chỉ lưu log lỗi nếu là hành động đáng kể
+            if (isSignificantAction(methodName, className)) {
+                ActivityLog activityLog = ActivityLog.builder()
+                        .userId(userId)
+                        .action(fullMethodName)
+                        .tableName(extractTableName(className))
+                        .recordId(null)
+                        .description(buildErrorDescription(methodName, parameters, e.getMessage(), executionTime))
+                        .ipAddress(ipAddress)
+                        .createdAt(LocalDateTime.now())
+                        .build();
 
-            activityLogService.saveLog(activityLog);
+                activityLogService.saveLog(activityLog);
+            }
 
             throw e;
         }
     }
 
+    /**
+     * Kiểm tra xem method có phải là hành động đáng kể cần log không.
+     * Chỉ log các thay đổi quan trọng: CREATE, UPDATE, DELETE, LOGIN, LOGOUT,
+     * REGISTER
+     */
+    private boolean isSignificantAction(String methodName, String className) {
+        String lowerMethodName = methodName.toLowerCase();
+        String lowerClassName = className.toLowerCase();
+
+        // KHÔNG log các operations read-only
+        if (lowerMethodName.startsWith("get") ||
+                lowerMethodName.startsWith("find") ||
+                lowerMethodName.startsWith("search") ||
+                lowerMethodName.startsWith("list") ||
+                lowerMethodName.startsWith("check") ||
+                lowerMethodName.startsWith("verify") ||
+                lowerMethodName.startsWith("validate") ||
+                lowerMethodName.startsWith("load") ||
+                lowerMethodName.startsWith("fetch")) {
+            return false;
+        }
+
+        // KHÔNG log token/blacklist operations
+        if (lowerMethodName.contains("blacklist") ||
+                lowerMethodName.contains("token") ||
+                lowerMethodName.contains("refresh")) {
+            return false;
+        }
+
+        // KHÔNG log authentication checks (trừ login/logout/register)
+        if (lowerClassName.contains("auth") &&
+                !lowerMethodName.equals("login") &&
+                !lowerMethodName.equals("logout") &&
+                !lowerMethodName.equals("register")) {
+            return false;
+        }
+
+        // CẦN log các operations thay đổi dữ liệu
+        if (lowerMethodName.startsWith("create") ||
+                lowerMethodName.startsWith("add") ||
+                lowerMethodName.startsWith("save") ||
+                lowerMethodName.startsWith("insert") ||
+                lowerMethodName.startsWith("update") ||
+                lowerMethodName.startsWith("edit") ||
+                lowerMethodName.startsWith("modify") ||
+                lowerMethodName.startsWith("change") ||
+                lowerMethodName.startsWith("delete") ||
+                lowerMethodName.startsWith("remove") ||
+                lowerMethodName.equals("login") ||
+                lowerMethodName.equals("logout") ||
+                lowerMethodName.equals("register")) {
+            return true;
+        }
+
+        // Mặc định KHÔNG log
+        return false;
+    }
 
     private Long getCurrentUserId() {
         try {
@@ -136,8 +197,8 @@ public class LoggingAspect {
 
     private String getClientIpAddress() {
         try {
-            ServletRequestAttributes attributes =
-                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .getRequestAttributes();
 
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
@@ -160,7 +221,6 @@ public class LoggingAspect {
         }
         return "Unknown";
     }
-
 
     private String extractTableName(String className) {
         // VD: StoryService -> stories
@@ -197,9 +257,8 @@ public class LoggingAspect {
         return null;
     }
 
-
     private String buildDescription(String methodName, String parameters,
-                                    String result, long executionTime) {
+            String result, long executionTime) {
         return String.format(
                 "Method: %s | Params: %s | Result: %s | Time: %dms",
                 methodName,
@@ -209,13 +268,12 @@ public class LoggingAspect {
                 result != null && result.length() > 500
                         ? result.substring(0, 500) + "..."
                         : result,
-                executionTime
-        );
+                executionTime);
     }
 
-    //Miêu tả thông tin lỗi
+    // Miêu tả thông tin lỗi
     private String buildErrorDescription(String methodName, String parameters,
-                                         String errorMessage, long executionTime) {
+            String errorMessage, long executionTime) {
         return String.format(
                 "Method: %s | Params: %s | ERROR: %s | Time: %dms",
                 methodName,
@@ -223,7 +281,6 @@ public class LoggingAspect {
                         ? parameters.substring(0, 500) + "..."
                         : parameters,
                 errorMessage,
-                executionTime
-        );
+                executionTime);
     }
 }

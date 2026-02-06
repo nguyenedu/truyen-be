@@ -13,19 +13,19 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findByUsername(String username);
+        Optional<User> findByUsername(String username);
 
-    Optional<User> findByEmail(String email);
+        Optional<User> findByEmail(String email);
 
-    Boolean existsByUsername(String username);
+        Boolean existsByUsername(String username);
 
-    Boolean existsByEmail(String email);
+        Boolean existsByEmail(String email);
 
-    Optional<User> findByResetPasswordToken(String token);
+        Optional<User> findByResetPasswordToken(String token);
 
-    @Query("SELECT u FROM User u WHERE " +
-            "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(u.fullname) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
+        @Query("SELECT u FROM User u WHERE " +
+                        "LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(u.fullname) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+        Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
 }
