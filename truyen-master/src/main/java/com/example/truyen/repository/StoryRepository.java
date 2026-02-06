@@ -43,8 +43,10 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
                         "(:minChapters IS NULL OR s.totalChapters >= :minChapters) AND " +
                         "(:maxChapters IS NULL OR s.totalChapters <= :maxChapters) AND " +
                         "(:startDate IS NULL OR s.createdAt >= :startDate) AND " +
-                        "(:endDate IS NULL OR s.createdAt <= :endDate) AND " +
-                        "(:categoryIds IS NULL OR c.id IN :categoryIds)")
+                        "(:endDate IS NULL OR s.createdAt <= :endDate) " +
+                        "GROUP BY s.id " +
+                        "HAVING (:categoryIds IS NULL OR :categoryCount IS NULL OR " +
+                        "COUNT(DISTINCT CASE WHEN c.id IN :categoryIds THEN c.id END) = :categoryCount)")
         Page<Story> filterStories(
                         @Param("keyword") String keyword,
                         @Param("authorId") Long authorId,
@@ -54,6 +56,7 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
                         @Param("startDate") LocalDateTime startDate,
                         @Param("endDate") LocalDateTime endDate,
                         @Param("categoryIds") List<Long> categoryIds,
+                        @Param("categoryCount") Integer categoryCount,
                         Pageable pageable);
 
         List<Story> findByStatusIn(List<Story.Status> statuses);

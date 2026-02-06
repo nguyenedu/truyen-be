@@ -214,6 +214,10 @@ public class StoryService {
             }
         }
 
+        Integer categoryCount = (categoryIds != null && !categoryIds.isEmpty())
+                ? categoryIds.size()
+                : null;
+
         return storyRepository.filterStories(
                 keyword,
                 authorId,
@@ -223,6 +227,7 @@ public class StoryService {
                 startDate,
                 endDate,
                 categoryIds,
+                categoryCount,
                 pageable).map(this::convertToResponse);
     }
 
