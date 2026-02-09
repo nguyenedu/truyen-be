@@ -98,7 +98,7 @@ public class ViewEventConsumer {
         } catch (Exception e) {
             log.error("Failed to process view event for story ID: {}: {}",
                     event.getStoryId(), e.getMessage());
-            throw e; // Re-throw để trigger retry
+            throw e;
         }
     }
 }

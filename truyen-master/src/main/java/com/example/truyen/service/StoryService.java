@@ -32,6 +32,7 @@ public class StoryService {
     private final AuthorRepository authorRepository;
     private final CategoryRepository categoryRepository;
     private final SearchProducer searchProducer;
+    private final RatingRepository ratingRepository;
 
     /**
      * Lấy danh sách tất cả truyện với phân trang.
@@ -264,6 +265,10 @@ public class StoryService {
                 .map(Category::getName)
                 .collect(Collectors.toSet());
 
+        // Fetch rating data
+        Double averageRating = ratingRepository.getAverageRating(story.getId());
+        Long totalRatingsCount = ratingRepository.countByStoryId(story.getId());
+
         return StoryResponse.builder()
                 .id(story.getId())
                 .title(story.getTitle())
@@ -278,6 +283,8 @@ public class StoryService {
                 .categories(categoryNames)
                 .createdAt(story.getCreatedAt())
                 .updatedAt(story.getUpdatedAt())
+                .averageRating(averageRating != null ? Math.round(averageRating * 10.0) / 10.0 : 0.0)
+                .totalRatings(totalRatingsCount != null ? totalRatingsCount.intValue() : 0)
                 .build();
     }
 }

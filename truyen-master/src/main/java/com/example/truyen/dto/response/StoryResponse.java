@@ -26,4 +26,6 @@ public class StoryResponse {
     private Set<String> categories;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Double averageRating;
+    private Integer totalRatings;
 }
