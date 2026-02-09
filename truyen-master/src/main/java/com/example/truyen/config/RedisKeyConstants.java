@@ -74,6 +74,48 @@ public class RedisKeyConstants {
      */
     public static final String STORY_TRENDING_SCORE = "story:trending:score:";
 
+    /**
+     * Key: trending:stories
+     * Type: Sorted Set (storyId -> score)
+     * TTL: 7 days
+     * Mục đích: Real-time trending scores từ Kafka analytics
+     * 
+     * Ví dụ: ZADD trending:stories 125.5 1
+     */
+    public static final String TRENDING_STORIES = "trending:stories";
+
+    // ==================== SEARCH ANALYTICS ====================
+
+    /**
+     * Key: search:popular
+     * Type: Sorted Set (query -> count)
+     * TTL: 30 days
+     * Mục đích: Popular search queries (all time)
+     * 
+     * Ví dụ: ZADD search:popular 1250 "truyen tien hiep"
+     */
+    public static final String SEARCH_POPULAR = "search:popular";
+
+    /**
+     * Key: search:trending:{date}
+     * Type: Sorted Set (query -> count)
+     * TTL: 7 days
+     * Mục đích: Trending searches theo ngày
+     * 
+     * Ví dụ: ZADD search:trending:2026-02-09 150 "one piece"
+     */
+    public static final String SEARCH_TRENDING = "search:trending:";
+
+    /**
+     * Key: search:user:{userId}
+     * Type: Sorted Set (query -> timestamp)
+     * TTL: 90 days
+     * Mục đích: Search history của user
+     * 
+     * Ví dụ: ZADD search:user:123 1707456000 "truyen ngon tinh"
+     */
+    public static final String SEARCH_USER_HISTORY = "search:user:";
+
     // ==================== HELPER KEYS ====================
 
     /**

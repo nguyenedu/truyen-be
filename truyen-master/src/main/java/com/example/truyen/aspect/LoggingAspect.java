@@ -75,18 +75,20 @@ public class LoggingAspect {
 
             // Chỉ lưu activity log nếu là hành động đáng kể
             if (isSignificantAction(methodName, className)) {
-                ActivityLog activityLog = ActivityLog.builder()
-                        .userId(userId)
-                        .action(fullMethodName)
-                        .tableName(extractTableName(className))
-                        .recordId(extractRecordId(result, args))
-                        .description(buildDescription(methodName, parameters, resultJson, executionTime))
-                        .ipAddress(ipAddress)
-                        .createdAt(LocalDateTime.now())
-                        .build();
+                String tableName = extractTableName(className);
+                Long recordId = extractRecordId(result, args);
+                String description = buildDescription(methodName, parameters, resultJson, executionTime);
+                String username = getCurrentUsername();
 
-                // Lưu vào database
-                activityLogService.saveLog(activityLog);
+                // Gửi activity log qua Kafka
+                activityLogService.logActivity(
+                        fullMethodName,
+                        tableName,
+                        recordId,
+                        extractEntityName(result),
+                        userId,
+                        username,
+                        description);
             }
 
             return result;
@@ -100,17 +102,19 @@ public class LoggingAspect {
 
             // Chỉ lưu log lỗi nếu là hành động đáng kể
             if (isSignificantAction(methodName, className)) {
-                ActivityLog activityLog = ActivityLog.builder()
-                        .userId(userId)
-                        .action(fullMethodName)
-                        .tableName(extractTableName(className))
-                        .recordId(null)
-                        .description(buildErrorDescription(methodName, parameters, e.getMessage(), executionTime))
-                        .ipAddress(ipAddress)
-                        .createdAt(LocalDateTime.now())
-                        .build();
+                String tableName = extractTableName(className);
+                String description = buildErrorDescription(methodName, parameters, e.getMessage(), executionTime);
+                String username = getCurrentUsername();
 
-                activityLogService.saveLog(activityLog);
+                // Gửi error log qua Kafka
+                activityLogService.logActivity(
+                        fullMethodName + " [ERROR]",
+                        tableName,
+                        null,
+                        null,
+                        userId,
+                        username,
+                        description);
             }
 
             throw e;
@@ -182,15 +186,38 @@ public class LoggingAspect {
             if (authentication != null && authentication.isAuthenticated()
                     && !"anonymousUser".equals(authentication.getPrincipal())) {
 
-                String username = authentication.getName();
-
-                // Inject UserRepository vào LoggingAspect và query
-                // Hoặc cache userId trong custom UserDetails
-
-                return null;
+                Object principal = authentication.getPrincipal();
+                if (principal instanceof User) {
+                    return ((User) principal).getId();
+                }
             }
         } catch (Exception e) {
             log.warn("Không lấy được user info: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private String getCurrentUsername() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                return authentication.getName();
+            }
+        } catch (Exception e) {
+            log.warn("Không lấy được username: {}", e.getMessage());
+        }
+        return "Anonymous";
+    }
+
+    private String extractEntityName(Object result) {
+        try {
+            if (result != null) {
+                Method getNameMethod = result.getClass().getMethod("getName");
+                Object name = getNameMethod.invoke(result);
+                return name != null ? name.toString() : null;
+            }
+        } catch (Exception e) {
+            // Không có method getName()
         }
         return null;
     }

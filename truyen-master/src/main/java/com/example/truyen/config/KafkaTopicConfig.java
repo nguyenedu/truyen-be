@@ -15,6 +15,7 @@ public class KafkaTopicConfig {
     public static final String STORY_VIEW_EVENTS = "story.view.events";
     public static final String ACTIVITY_LOGS = "activity.logs";
     public static final String ANALYTICS_EVENTS = "analytics.events";
+    public static final String SEARCH_QUERIES = "search.queries";
 
     /**
      * Topic cho view tracking events
@@ -52,6 +53,17 @@ public class KafkaTopicConfig {
     public NewTopic analyticsEventsTopic() {
         return TopicBuilder.name(ANALYTICS_EVENTS)
                 .partitions(3)
+                .replicas(2)
+                .build();
+    }
+
+    /**
+     * Topic cho search analytics
+     */
+    @Bean
+    public NewTopic searchQueriesTopic() {
+        return TopicBuilder.name(SEARCH_QUERIES)
+                .partitions(2)
                 .replicas(2)
                 .build();
     }

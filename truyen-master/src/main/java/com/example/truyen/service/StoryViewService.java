@@ -1,16 +1,20 @@
 package com.example.truyen.service;
 
 import com.example.truyen.config.RedisKeyConstants;
+import com.example.truyen.dto.event.AnalyticsEvent;
+import com.example.truyen.dto.event.ViewEvent;
+import com.example.truyen.entity.Story;
+import com.example.truyen.kafka.producer.AnalyticsProducer;
+import com.example.truyen.kafka.producer.ViewEventProducer;
 import com.example.truyen.repository.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,43 +23,28 @@ public class StoryViewService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final StoryRepository storyRepository;
+    private final ViewEventProducer viewEventProducer;
+    private final AnalyticsProducer analyticsProducer;
 
     /**
-     * trackView tăng lượt view và số người dùng xem Story ấy.
+     * trackView gửi view event vào Kafka để xử lý bất đồng bộ.
+     * Response time cực nhanh vì chỉ gửi message vào Kafka.
      */
-    @Async
-    @Transactional
     public void trackView(Long storyId, Long userId, String ipAddress) {
         try {
-            String today = LocalDate.now().toString();
+            // Tạo session ID để deduplication
+            String sessionId = UUID.randomUUID().toString();
 
-            // 1. Tăng lượng views trong ngày
-            String viewKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
-            Long currentViews = redisTemplate.opsForValue().increment(viewKey, 1);
-            redisTemplate.expire(viewKey, Duration.ofDays(1));
+            // Tạo view event
+            ViewEvent viewEvent = ViewEvent.create(storyId, userId, ipAddress, sessionId);
 
-            // 2. Đếm số lượng user đã xem trong ngày
-            if (userId != null) {
-                String viewerKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
-                redisTemplate.opsForSet().add(viewerKey, userId);
-                redisTemplate.expire(viewerKey, Duration.ofDays(1));
-            }
+            // Gửi vào Kafka (non-blocking, async)
+            viewEventProducer.sendViewEvent(viewEvent);
 
-            // 3. tăng lượt view theo ngày
-            String dateViewKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
-            redisTemplate.opsForValue().increment(dateViewKey, 1);
-            redisTemplate.expire(dateViewKey, Duration.ofDays(35));
-
-            // 4. Đồng bộ hóa với cơ sở dữ liệu sau mỗi 10 lượt xem
-            if (currentViews != null && currentViews % 10 == 0) {
-                storyRepository.incrementTotalViews(storyId, 10);
-                log.debug("Synced 10 views to database for story ID: {}", storyId);
-            }
-
-            log.debug("View tracked for story ID: {} by user ID: {} from IP: {}", storyId, userId, ipAddress);
+            log.debug("View event sent to Kafka for story ID: {} by user ID: {}", storyId, userId);
 
         } catch (Exception e) {
-            log.error("Failed to track view for story ID: {}: {}", storyId, e.getMessage());
+            log.error("Failed to send view event to Kafka for story ID: {}: {}", storyId, e.getMessage());
         }
     }
 
@@ -89,7 +78,7 @@ public class StoryViewService {
     }
 
     /**
-     *  Tính tổng số view trong ngày
+     * Tính tổng số view trong ngày
      */
     public Long getViewsToday(Long storyId) {
         String key = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;

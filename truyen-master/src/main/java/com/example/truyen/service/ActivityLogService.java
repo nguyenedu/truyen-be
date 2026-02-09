@@ -1,6 +1,8 @@
 package com.example.truyen.service;
 
+import com.example.truyen.dto.event.ActivityLogEvent;
 import com.example.truyen.entity.ActivityLog;
+import com.example.truyen.kafka.producer.ActivityLogProducer;
 import com.example.truyen.repository.ActivityLogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,9 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -21,50 +21,23 @@ import java.time.LocalDateTime;
 public class ActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
+    private final ActivityLogProducer activityLogProducer;
     private final ObjectMapper objectMapper;
 
     /**
-     * Lưu nhật ký hoạt động bất đồng bộ trong một giao dịch mới.
+     * Gửi activity log event vào Kafka (non-blocking).
+     * Thay thế cho saveLog async method.
      */
-    @Async
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveLog(ActivityLog activityLog) {
+    public void logActivity(String action, String entityType, Long entityId,
+            String entityName, Long userId, String username, String details) {
         try {
-            activityLogRepository.save(activityLog);
-            log.debug("Activity log saved: {}", activityLog.getAction());
+            ActivityLogEvent event = ActivityLogEvent.create(
+                    action, entityType, entityId, entityName, userId, username, details);
+            activityLogProducer.sendActivityLog(event);
+            log.debug("Activity log event sent to Kafka: {} {}", action, entityType);
         } catch (Exception e) {
-            log.error("Error saving activity log: {}", e.getMessage(), e);
+            log.error("Failed to send activity log event: {}", e.getMessage());
         }
-    }
-
-    /**
-     * Lưu nhật ký hoạt động đồng bộ trong một giao dịch mới.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveLogSync(ActivityLog activityLog) {
-        try {
-            activityLogRepository.save(activityLog);
-        } catch (Exception e) {
-            log.error("Error saving activity log: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Tạo thực thể nhật ký hoạt động từ dữ liệu cung cấp.
-     */
-    public ActivityLog createLog(Long userId, String action, String tableName,
-            Long recordId, Object data, String ipAddress) {
-        String description = convertObjectToJson(data);
-
-        return ActivityLog.builder()
-                .userId(userId)
-                .action(action)
-                .tableName(tableName)
-                .recordId(recordId)
-                .description(description)
-                .ipAddress(ipAddress)
-                .createdAt(LocalDateTime.now())
-                .build();
     }
 
     /**

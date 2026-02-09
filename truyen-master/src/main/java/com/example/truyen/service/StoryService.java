@@ -1,16 +1,15 @@
 package com.example.truyen.service;
 
+import com.example.truyen.dto.event.SearchEvent;
 import com.example.truyen.dto.request.StoryRequest;
 import com.example.truyen.dto.response.StoryResponse;
-import com.example.truyen.entity.Author;
-import com.example.truyen.entity.Category;
-import com.example.truyen.entity.Story;
+import com.example.truyen.entity.*;
 import com.example.truyen.exception.BadRequestException;
 import com.example.truyen.exception.ResourceNotFoundException;
-import com.example.truyen.repository.AuthorRepository;
-import com.example.truyen.repository.CategoryRepository;
-import com.example.truyen.repository.StoryRepository;
+import com.example.truyen.kafka.producer.SearchProducer;
+import com.example.truyen.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,17 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListResourceBundle;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoryService {
 
     private final StoryRepository storyRepository;
     private final AuthorRepository authorRepository;
     private final CategoryRepository categoryRepository;
+    private final SearchProducer searchProducer;
 
     /**
      * Lấy danh sách tất cả truyện với phân trang.
@@ -56,7 +56,21 @@ public class StoryService {
      */
     @Transactional(readOnly = true)
     public Page<StoryResponse> searchStories(String keyword, int page, int size) {
-        return storyRepository.searchByTitle(keyword, PageRequest.of(page, size)).map(this::convertToResponse);
+        Page<StoryResponse> results = storyRepository.searchByTitle(keyword, PageRequest.of(page, size))
+                .map(this::convertToResponse);
+
+        // Gửi search event vào Kafka để analytics
+        try {
+            SearchEvent searchEvent = SearchEvent.create(
+                    keyword,
+                    null, // userId - có thể lấy từ SecurityContext nếu cần
+                    (int) results.getTotalElements());
+            searchProducer.sendSearchEvent(searchEvent);
+        } catch (Exception e) {
+            log.warn("Failed to send search event: {}", e.getMessage());
+        }
+
+        return results;
     }
 
     /**
