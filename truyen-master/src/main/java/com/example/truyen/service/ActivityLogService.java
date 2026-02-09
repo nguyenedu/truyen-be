@@ -25,16 +25,54 @@ public class ActivityLogService {
     private final ObjectMapper objectMapper;
 
     // Ghi lại hoạt động vào Kafka
+    // Ghi lại hoạt động vào Kafka (có fallback save DB)
     public void logActivity(String action, String entityType, Long entityId,
             String entityName, Long userId, String username, String details) {
+
+        ActivityLogEvent event = ActivityLogEvent.create(
+                action, entityType, entityId, entityName, userId, username, details);
+
         try {
-            ActivityLogEvent event = ActivityLogEvent.create(
-                    action, entityType, entityId, entityName, userId, username, details);
             activityLogProducer.sendActivityLog(event);
             log.debug("Activity log event sent to Kafka: {} {}", action, entityType);
         } catch (Exception e) {
-            log.error("Failed to send activity log event: {}", e.getMessage());
+            log.error("Failed to send activity log event to Kafka: {}. Fallback to direct DB save.", e.getMessage());
+            saveLogDirectly(event);
         }
+    }
+
+    // Fallback: Lưu trực tiếp vào DB nếu Kafka lỗi
+    private void saveLogDirectly(ActivityLogEvent event) {
+        try {
+            ActivityLog activityLog = ActivityLog.builder()
+                    .userId(event.getUserId())
+                    .action(event.getAction())
+                    .tableName(event.getEntityType())
+                    .recordId(event.getEntityId())
+                    .description(buildDescription(event))
+                    .ipAddress(null) // Context IP might be lost here, can be improved if needed
+                    .build();
+
+            activityLogRepository.save(activityLog);
+            log.info("Activity log saved directly to DB (Fallback): {}", event.getAction());
+        } catch (Exception e) {
+            log.error("Failed to save activity log fallback: {}", e.getMessage());
+        }
+    }
+
+    // Helper tạo mô tả giống Consumer
+    private String buildDescription(ActivityLogEvent event) {
+        StringBuilder desc = new StringBuilder();
+        if (event.getUsername() != null) {
+            desc.append("User: ").append(event.getUsername()).append(", ");
+        }
+        if (event.getEntityName() != null) {
+            desc.append("Entity: ").append(event.getEntityName()).append(", ");
+        }
+        if (event.getDetails() != null) {
+            desc.append("Details: ").append(event.getDetails());
+        }
+        return desc.toString();
     }
 
     // Chuyển đổi đối tượng sang chuỗi JSON
