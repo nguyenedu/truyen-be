@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service xử lý search analytics
+ * Service to handle search analytics
  */
 @Service
 @RequiredArgsConstructor
@@ -21,10 +21,7 @@ public class SearchAnalyticsService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    /**
-     * Lấy auto-suggest cho search query
-     * Kết hợp popular searches + user history
-     */
+    // Gợi ý từ khóa: kết hợp lịch sử, xu hướng và phổ biến
     public List<String> getAutoSuggest(String prefix, Long userId, int limit) {
         if (prefix == null || prefix.trim().isEmpty()) {
             return Collections.emptyList();
@@ -33,7 +30,7 @@ public class SearchAnalyticsService {
         String normalizedPrefix = prefix.toLowerCase().trim();
         Set<String> suggestions = new LinkedHashSet<>();
 
-        // 1. Lấy từ user history (nếu có) - ưu tiên cao nhất
+        // 1. Get from user history (if any) - highest priority
         if (userId != null) {
             Set<String> userHistory = getUserSearchHistory(userId, 10);
             userHistory.stream()
@@ -42,14 +39,14 @@ public class SearchAnalyticsService {
                     .forEach(suggestions::add);
         }
 
-        // 2. Lấy từ trending searches (hôm nay)
+        // 2. Get from trending searches (today)
         Set<String> trending = getTrendingSearches(5);
         trending.stream()
                 .filter(q -> q.startsWith(normalizedPrefix))
                 .limit(2)
                 .forEach(suggestions::add);
 
-        // 3. Lấy từ popular searches (all time)
+        // 3. Get from popular searches (all time)
         Set<String> popular = getPopularSearches(20);
         popular.stream()
                 .filter(q -> q.startsWith(normalizedPrefix))
@@ -61,9 +58,7 @@ public class SearchAnalyticsService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy popular searches (all time)
-     */
+    // Lấy từ khóa phổ biến (toàn thời gian)
     public Set<String> getPopularSearches(int limit) {
         try {
             Set<ZSetOperations.TypedTuple<Object>> results = redisTemplate.opsForZSet()
@@ -83,9 +78,7 @@ public class SearchAnalyticsService {
         }
     }
 
-    /**
-     * Lấy trending searches (hôm nay)
-     */
+    // Lấy từ khóa xu hướng (trong ngày)
     public Set<String> getTrendingSearches(int limit) {
         try {
             String key = RedisKeyConstants.SEARCH_TRENDING + LocalDate.now();
@@ -106,9 +99,7 @@ public class SearchAnalyticsService {
         }
     }
 
-    /**
-     * Lấy search history của user
-     */
+    // Lấy lịch sử tìm kiếm của người dùng
     public Set<String> getUserSearchHistory(Long userId, int limit) {
         try {
             String key = RedisKeyConstants.SEARCH_USER_HISTORY + userId;
@@ -129,9 +120,7 @@ public class SearchAnalyticsService {
         }
     }
 
-    /**
-     * Lấy popular searches với scores (để hiển thị số lượng)
-     */
+    // Lấy từ khóa phổ biến kèm điểm số
     public Map<String, Double> getPopularSearchesWithScores(int limit) {
         try {
             Set<ZSetOperations.TypedTuple<Object>> results = redisTemplate.opsForZSet()

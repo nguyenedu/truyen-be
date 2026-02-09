@@ -32,15 +32,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt)) {
-                //  KIỂM TRA DANH SÁCH ĐEN TRƯỚC
+                // CHECK BLACKLIST FIRST
                 if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-                    logger.warn("Token nằm trong danh sách đen");
+                    logger.warn("Token is in blacklist");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("{\"error\": \"Token đã bị thu hồi\"}");
+                    response.getWriter().write("{\"error\": \"Token has been revoked\"}");
                     return;
                 }
 
-                // Xác thực token
+                // Validate token
                 if (jwtTokenProvider.validateToken(jwt)) {
                     String username = jwtTokenProvider.getUsernameFromToken(jwt);
 
@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception ex) {
-            logger.error("Không thể set user authentication", ex);
+            logger.error("Could not set user authentication", ex);
         }
 
         filterChain.doFilter(request, response);

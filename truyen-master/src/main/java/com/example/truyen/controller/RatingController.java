@@ -20,55 +20,45 @@ public class RatingController {
 
     private final RatingService ratingService;
 
-    /**
-     * Đánh giá truyện.
-     */
+    // Đánh giá truyện
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RatingResponse>> rateStory(@Valid @RequestBody RatingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Đánh giá truyện thành công", ratingService.rateStory(request)));
+                .body(ApiResponse.success("Rate story successfully", ratingService.rateStory(request)));
     }
 
-    /**
-     * Cập nhật đánh giá hiện có.
-     */
+    // Cập nhật đánh giá
     @PutMapping("/{storyId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RatingResponse>> updateRating(
             @PathVariable Long storyId,
             @Valid @RequestBody RatingRequest request) {
         return ResponseEntity
-                .ok(ApiResponse.success("Cập nhật đánh giá thành công", ratingService.updateRating(storyId, request)));
+                .ok(ApiResponse.success("Update rating successfully", ratingService.updateRating(storyId, request)));
     }
 
-    /**
-     * Xóa đánh giá.
-     */
+    // Xóa đánh giá
     @DeleteMapping("/{storyId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<String>> deleteRating(@PathVariable Long storyId) {
         ratingService.deleteRating(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Xóa đánh giá thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Delete rating successfully", null));
     }
 
-    /**
-     * Lấy đánh giá của người dùng hiện tại cho một truyện.
-     */
+    // Lấy đánh giá của tôi về truyện
     @GetMapping("/my/{storyId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<RatingResponse>> getMyRatingForStory(@PathVariable Long storyId) {
         return ResponseEntity
-                .ok(ApiResponse.success("Lấy thông tin đánh giá thành công",
+                .ok(ApiResponse.success("Get rating info successfully",
                         ratingService.getMyRatingForStory(storyId)));
     }
 
-    /**
-     * Lấy thông tin đánh giá trung bình của truyện.
-     */
+    // Lấy thống kê đánh giá của truyện
     @GetMapping("/story/{storyId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStoryRatingInfo(@PathVariable Long storyId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy thông tin đánh giá thành công", ratingService.getStoryRatingInfo(storyId)));
+                ApiResponse.success("Get rating info successfully", ratingService.getStoryRatingInfo(storyId)));
     }
 }

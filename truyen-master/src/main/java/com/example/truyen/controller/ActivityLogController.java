@@ -19,9 +19,7 @@ public class ActivityLogController {
 
     private final ActivityLogService activityLogService;
 
-    /**
-     * Lấy danh sách nhật ký hoạt động với bộ lọc tùy chọn.
-     */
+    // Lấy nhật ký hoạt động (có lọc)
     @GetMapping
     public ResponseEntity<Page<ActivityLog>> getAllLogs(
             @RequestParam(defaultValue = "0") int page,
@@ -44,9 +42,7 @@ public class ActivityLogController {
         return ResponseEntity.ok(activityLogService.getAllLogs(pageable));
     }
 
-    /**
-     * Lấy nhật ký hoạt động của một người dùng cụ thể.
-     */
+    // Lấy nhật ký hoạt động của người dùng
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Page<ActivityLog>> getLogsByUser(

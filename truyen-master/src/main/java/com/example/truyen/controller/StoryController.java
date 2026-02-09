@@ -18,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
+
 import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "http://localhost:5174")
@@ -30,79 +30,62 @@ public class StoryController {
         private final StoryService storyService;
         private final MinIoService minIoService;
 
-        /**
-         * Lấy danh sách tất cả truyện với phân trang.
-         */
+        // Lấy danh sách truyện (có phân trang)
         @GetMapping
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> getAllStories(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size) {
-                return ResponseEntity
-                                .ok(ApiResponse.success("Lấy danh sách truyện thành công",
-                                                storyService.getAllStories(page, size)));
+                return ResponseEntity.ok(ApiResponse.success("Get story list successfully",
+                                storyService.getAllStories(page, size)));
         }
 
-        /**
-         * Lấy chi tiết truyện theo ID và tăng lượt xem.
-         */
+        // Lấy chi tiết truyện theo ID và tăng lượt xem
         @GetMapping("/{id}")
         public ResponseEntity<ApiResponse<StoryResponse>> getStoryById(@PathVariable Long id) {
-                StoryResponse story = storyService.getStoryById(id);
+                var story = storyService.getStoryById(id);
                 storyService.increaseView(id);
-                return ResponseEntity.ok(ApiResponse.success("Lấy thông tin truyện thành công", story));
+                return ResponseEntity.ok(ApiResponse.success("Get story details successfully", story));
         }
 
-        /**
-         * Tìm kiếm truyện theo từ khóa.
-         */
+        // Tìm kiếm truyện theo từ khóa
         @GetMapping("/search")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> searchStories(
                         @RequestParam String keyword,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size) {
-                return ResponseEntity.ok(
-                                ApiResponse.success("Tìm kiếm hoàn tất",
-                                                storyService.searchStories(keyword, page, size)));
+                return ResponseEntity.ok(ApiResponse.success("Search completed",
+                                storyService.searchStories(keyword, page, size)));
         }
 
-        /**
-         * Lấy danh sách truyện theo thể loại.
-         */
+        // Lấy truyện theo danh mục
         @GetMapping("/category/{categoryId}")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> getStoriesByCategory(
                         @PathVariable Long categoryId,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size) {
-                return ResponseEntity.ok(ApiResponse.success("Lấy danh sách truyện thành công",
+                return ResponseEntity.ok(ApiResponse.success("Get story list successfully",
                                 storyService.getStoriesByCategory(categoryId, page, size)));
         }
 
-        /**
-         * Lấy danh sách truyện đang thịnh hành (HOT).
-         */
+        // Lấy danh sách truyện HOT
         @GetMapping("/hot")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> getHotStories(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size) {
-                return ResponseEntity
-                                .ok(ApiResponse.success("Lấy danh sách truyện HOT thành công",
-                                                storyService.getHotStories(page, size)));
+                return ResponseEntity.ok(ApiResponse.success("Get hot stories successfully",
+                                storyService.getHotStories(page, size)));
         }
 
-        /**
-         * Lấy danh sách truyện mới cập nhật.
-         */
+        // Lấy danh sách truyện mới nhất
         @GetMapping("/latest")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> getLatestStories(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size) {
-                return ResponseEntity.ok(ApiResponse.success("Lấy danh sách truyện mới nhất thành công",
+                return ResponseEntity.ok(ApiResponse.success("Get latest stories successfully",
                                 storyService.getLatestStories(page, size)));
         }
 
-        /**
-         * Tạo truyện mới với ảnh bìa (Multipart).
-         */
+        // Tạo truyện mới kèm ảnh bìa
         @PostMapping(consumes = { "multipart/form-data" })
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> createStoryWithImage(
@@ -112,11 +95,12 @@ public class StoryController {
                         @RequestParam(required = false) String status,
                         @RequestParam(required = false) MultipartFile coverImage,
                         @RequestParam(required = false) String categoryIds) {
+
                 String imageUrl = (coverImage != null && !coverImage.isEmpty())
                                 ? minIoService.uploadFile(coverImage, "story-covers")
                                 : null;
 
-                StoryRequest request = new StoryRequest();
+                var request = new StoryRequest();
                 request.setTitle(title);
                 request.setAuthorId(authorId);
                 request.setDescription(description);
@@ -124,7 +108,7 @@ public class StoryController {
                 request.setStatus(status);
 
                 if (categoryIds != null && !categoryIds.isEmpty()) {
-                        Set<Long> categoryIdSet = Arrays.stream(categoryIds.split(","))
+                        var categoryIdSet = Arrays.stream(categoryIds.split(","))
                                         .map(String::trim)
                                         .map(Long::parseLong)
                                         .collect(Collectors.toSet());
@@ -132,23 +116,20 @@ public class StoryController {
                 }
 
                 return ResponseEntity.status(HttpStatus.CREATED)
-                                .body(ApiResponse.success("Tạo truyện thành công", storyService.createStory(request)));
+                                .body(ApiResponse.success("Create story successfully",
+                                                storyService.createStory(request)));
         }
 
-        /**
-         * Tạo truyện mới (JSON).
-         */
+        // Tạo truyện mới (JSON)
         @PostMapping(consumes = { "application/json" })
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> createStory(@Valid @RequestBody StoryRequest request) {
                 return ResponseEntity.status(HttpStatus.CREATED)
-                                .body(ApiResponse.success("Tạo truyện thành công",
+                                .body(ApiResponse.success("Create story successfully",
                                                 storyService.createStory(request)));
         }
 
-        /**
-         * Cập nhật ảnh bìa cho truyện hiện có.
-         */
+        // Cập nhật ảnh bìa truyện
         @PutMapping("/{id}/cover-image")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> updateCoverImage(
@@ -156,17 +137,15 @@ public class StoryController {
                         @RequestParam MultipartFile coverImage) {
                 String imageUrl = minIoService.uploadFile(coverImage, "story-covers");
 
-                StoryRequest request = new StoryRequest();
+                var request = new StoryRequest();
                 request.setImage(imageUrl);
 
                 return ResponseEntity
-                                .ok(ApiResponse.success("Cập nhật ảnh bìa thành công",
+                                .ok(ApiResponse.success("Update cover image successfully",
                                                 storyService.updateStory(id, request)));
         }
 
-        /**
-         * Cập nhật thông tin truyện với ảnh bìa (Multipart).
-         */
+        // Cập nhật thông tin truyện kèm ảnh bìa
         @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> updateStoryWithImage(
@@ -177,11 +156,12 @@ public class StoryController {
                         @RequestParam(required = false) String status,
                         @RequestParam(required = false) MultipartFile coverImage,
                         @RequestParam(required = false) String categoryIds) {
+
                 String imageUrl = (coverImage != null && !coverImage.isEmpty())
                                 ? minIoService.uploadFile(coverImage, "story-covers")
                                 : null;
 
-                StoryRequest request = new StoryRequest();
+                var request = new StoryRequest();
                 request.setTitle(title);
                 request.setAuthorId(authorId);
                 request.setDescription(description);
@@ -189,52 +169,42 @@ public class StoryController {
                 request.setStatus(status);
 
                 if (categoryIds != null && !categoryIds.isEmpty()) {
-                        Set<Long> categoryIdSet = Arrays.stream(categoryIds.split(","))
+                        var categoryIdSet = Arrays.stream(categoryIds.split(","))
                                         .map(String::trim)
                                         .map(Long::parseLong)
                                         .collect(Collectors.toSet());
                         request.setCategoryIds(categoryIdSet);
                 }
 
-                return ResponseEntity
-                                .ok(ApiResponse.success("Cập nhật truyện thành công",
-                                                storyService.updateStory(id, request)));
+                return ResponseEntity.ok(ApiResponse.success("Update story successfully",
+                                storyService.updateStory(id, request)));
         }
 
-        /**
-         * Cập nhật thông tin truyện (JSON).
-         */
+        // Cập nhật thông tin truyện (JSON)
         @PutMapping(value = "/{id}", consumes = { "application/json" })
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> updateStory(@PathVariable Long id,
                         @Valid @RequestBody StoryRequest request) {
-                return ResponseEntity
-                                .ok(ApiResponse.success("Cập nhật truyện thành công",
-                                                storyService.updateStory(id, request)));
+                return ResponseEntity.ok(ApiResponse.success("Update story successfully",
+                                storyService.updateStory(id, request)));
         }
 
-        /**
-         * Xóa một truyện.
-         */
+        // Xóa truyện
         @DeleteMapping("/{id}")
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<String>> deleteStory(@PathVariable Long id) {
                 storyService.deleteStory(id);
-                return ResponseEntity.ok(ApiResponse.success("Xóa truyện thành công", null));
+                return ResponseEntity.ok(ApiResponse.success("Delete story successfully", null));
         }
 
-        /**
-         * Lấy danh sách truyện theo tác giả.
-         */
+        // Lấy danh sách truyện của một tác giả
         @GetMapping("/author/{authorId}")
         public ApiResponse<List<StoryResponse>> getStoriesByAuthor(@PathVariable Long authorId) {
-                return ApiResponse.success("Lấy danh sách truyện thành công",
+                return ApiResponse.success("Get story list successfully",
                                 storyService.getStoriesByAuthor(authorId));
         }
 
-        /**
-         * Lọc truyện dựa trên nhiều tiêu chí.
-         */
+        // Lọc truyện nâng cao
         @GetMapping("/filter")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> filterStories(
                         @RequestParam(required = false) String keyword,
@@ -248,9 +218,9 @@ public class StoryController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "id,desc") String sort) {
-                Page<StoryResponse> stories = storyService.filterStories(
+                var stories = storyService.filterStories(
                                 keyword, authorId, status, minChapters, maxChapters,
                                 startDate, endDate, categoryIds, page, size, sort);
-                return ResponseEntity.ok(ApiResponse.success("Lấy danh sách truyện đã lọc thành công", stories));
+                return ResponseEntity.ok(ApiResponse.success("Get filtered stories successfully", stories));
         }
 }

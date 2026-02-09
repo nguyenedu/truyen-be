@@ -26,19 +26,16 @@ public class StoryViewService {
     private final ViewEventProducer viewEventProducer;
     private final AnalyticsProducer analyticsProducer;
 
-    /**
-     * trackView gửi view event vào Kafka để xử lý bất đồng bộ.
-     * Response time cực nhanh vì chỉ gửi message vào Kafka.
-     */
+    // Gửi sự kiện xem tới Kafka để xử lý bất đồng bộ
     public void trackView(Long storyId, Long userId, String ipAddress) {
         try {
-            // Tạo session ID để deduplication
+            // Create session ID for deduplication
             String sessionId = UUID.randomUUID().toString();
 
-            // Tạo view event
+            // Create view event
             ViewEvent viewEvent = ViewEvent.create(storyId, userId, ipAddress, sessionId);
 
-            // Gửi vào Kafka (non-blocking, async)
+            // Send to Kafka (non-blocking, async)
             viewEventProducer.sendViewEvent(viewEvent);
 
             log.debug("View event sent to Kafka for story ID: {} by user ID: {}", storyId, userId);
@@ -48,9 +45,7 @@ public class StoryViewService {
         }
     }
 
-    /**
-     * Đếm số lượng view trung bình trong N ngày
-     */
+    // Đếm lượt xem trong N ngày gần đây
     public Long getRecentViews(Long storyId, int days) {
         long totalViews = 0;
         LocalDate today = LocalDate.now();
@@ -68,27 +63,21 @@ public class StoryViewService {
         return totalViews;
     }
 
-    /**
-     * Dếm số người dùng duy nhất đã xem truyện trong ngày hôm nay.
-     */
+    // Đếm số người xem duy nhất trong ngày
     public Long getUniqueViewersToday(Long storyId) {
         String key = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
         Long size = redisTemplate.opsForSet().size(key);
         return size != null ? size : 0L;
     }
 
-    /**
-     * Tính tổng số view trong ngày
-     */
+    // Lấy tổng lượt xem trong ngày
     public Long getViewsToday(Long storyId) {
         String key = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
         Object views = redisTemplate.opsForValue().get(key);
         return views != null ? Long.parseLong(views.toString()) : 0L;
     }
 
-    /**
-     * Đồng bộ lượt xem từ redis về cơ sở dữ liệu.
-     */
+    // Đồng bộ lượt xem từ Redis vào cơ sở dữ liệu
     @Transactional
     public void syncAllViewsToDatabase() {
         try {

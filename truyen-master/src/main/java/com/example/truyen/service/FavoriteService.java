@@ -26,9 +26,7 @@ public class FavoriteService {
     private final UserRepository userRepository;
     private final StoryRepository storyRepository;
 
-    /**
-     * Lấy danh sách truyện yêu thích của người dùng hiện tại với phân trang.
-     */
+    // Lấy danh sách truyện yêu thích của người dùng hiện tại (phân trang)
     @Transactional(readOnly = true)
     public Page<FavoriteResponse> getMyFavorites(int page, int size) {
         User currentUser = getCurrentUser();
@@ -36,18 +34,14 @@ public class FavoriteService {
                 .map(this::convertToResponse);
     }
 
-    /**
-     * Kiểm tra xem truyện có được người dùng hiện tại yêu thích hay không.
-     */
+    // Kiểm tra xem người dùng đã yêu thích truyện chưa
     @Transactional(readOnly = true)
     public Boolean isFavorite(Long storyId) {
         User currentUser = getCurrentUser();
         return favoriteRepository.existsByUserIdAndStoryId(currentUser.getId(), storyId);
     }
 
-    /**
-     * Thêm truyện vào danh sách yêu thích của người dùng hiện tại.
-     */
+    // Thêm truyện vào danh sách yêu thích (nếu chưa có)
     @Transactional
     public FavoriteResponse addFavorite(Long storyId) {
         User currentUser = getCurrentUser();
@@ -55,7 +49,7 @@ public class FavoriteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", storyId));
 
         if (favoriteRepository.existsByUserIdAndStoryId(currentUser.getId(), storyId)) {
-            throw new BadRequestException("Truyện đã có trong danh sách yêu thích của bạn");
+            throw new BadRequestException("Story is already in your favorites");
         }
 
         Favorite favorite = Favorite.builder()
@@ -66,38 +60,34 @@ public class FavoriteService {
         return convertToResponse(favoriteRepository.save(favorite));
     }
 
-    /**
-     * Xóa truyện khỏi danh sách yêu thích của người dùng hiện tại.
-     */
+    // Xóa truyện khỏi danh sách yêu thích
     @Transactional
     public void removeFavorite(Long storyId) {
         User currentUser = getCurrentUser();
         Favorite favorite = favoriteRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
                 .orElseThrow(
-                        () -> new ResourceNotFoundException("Không tìm thấy truyện trong danh sách yêu thích của bạn"));
+                        () -> new ResourceNotFoundException("Story not found in your favorites"));
 
         favoriteRepository.delete(favorite);
     }
 
-    /**
-     * Lấy tổng số lượt yêu thích cho một truyện cụ thể.
-     */
+    // Đếm tổng số lượt yêu thích của một truyện
     @Transactional(readOnly = true)
     public Long countFavoritesByStoryId(Long storyId) {
         return favoriteRepository.countByStoryId(storyId);
     }
 
     /**
-     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
+     * Get current logged-in user from SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     /**
-     * Chuyển đổi Favorite sang FavoriteResponse DTO.
+     * Convert Favorite to FavoriteResponse DTO.
      */
     private FavoriteResponse convertToResponse(Favorite favorite) {
         Story story = favorite.getStory();

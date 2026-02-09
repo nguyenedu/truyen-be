@@ -17,6 +17,7 @@ public class TokenBlacklistService {
 
     private static final String BLACKLIST_PREFIX = "blacklist:token:";
 
+    // Thêm token vào danh sách đen (với thời gian hết hạn)
     public void blacklistToken(String token, long expirationTime) {
         String key = BLACKLIST_PREFIX + token;
 
@@ -29,21 +30,21 @@ public class TokenBlacklistService {
         }
     }
 
-
+    // Kiểm tra token có trong danh sách đen không
     public boolean isTokenBlacklisted(String token) {
         String key = BLACKLIST_PREFIX + token;
         Boolean exists = redisTemplate.hasKey(key);
         return exists != null && exists;
     }
 
-
+    // Xóa token khỏi danh sách đen
     public void removeFromBlacklist(String token) {
         String key = BLACKLIST_PREFIX + token;
         redisTemplate.delete(key);
         log.info("Token removed from blacklist");
     }
 
-
+    // Xóa tất cả token trong danh sách đen
     public void clearAllBlacklist() {
         redisTemplate.keys(BLACKLIST_PREFIX + "*")
                 .forEach(redisTemplate::delete);

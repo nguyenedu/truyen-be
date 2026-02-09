@@ -27,9 +27,7 @@ public class ReadingHistoryService {
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
 
-    /**
-     * Lấy lịch sử đọc của người dùng hiện tại với phân trang.
-     */
+    // Lấy danh sách lịch sử đọc (phân trang)
     @Transactional(readOnly = true)
     public Page<ReadingHistoryResponse> getMyReadingHistory(int page, int size) {
         User currentUser = getCurrentUser();
@@ -37,9 +35,7 @@ public class ReadingHistoryService {
                 .map(this::convertToResponse);
     }
 
-    /**
-     * Lấy trạng thái đọc của một truyện cụ thể.
-     */
+    // Lấy trạng thái đọc của một truyện
     @Transactional(readOnly = true)
     public ReadingHistoryResponse getReadingHistoryForStory(Long storyId) {
         User currentUser = getCurrentUser();
@@ -48,9 +44,7 @@ public class ReadingHistoryService {
                 .orElse(null);
     }
 
-    /**
-     * Lưu hoặc cập nhật tiến trình đọc cho một truyện và chương cụ thể.
-     */
+    // Lưu hoặc cập nhật tiến độ đọc cho truyện và chương
     @Transactional
     public ReadingHistoryResponse saveReadingHistory(Long storyId, Long chapterId) {
         User currentUser = getCurrentUser();
@@ -62,7 +56,7 @@ public class ReadingHistoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Chapter", "id", chapterId));
 
         if (!chapter.getStory().getId().equals(storyId)) {
-            throw new BadRequestException("Chương không thuộc về truyện này");
+            throw new BadRequestException("Chapter does not belong to this story");
         }
 
         ReadingHistory history = readingHistoryRepository
@@ -76,21 +70,17 @@ public class ReadingHistoryService {
         return convertToResponse(readingHistoryRepository.save(history));
     }
 
-    /**
-     * Xóa lịch sử đọc của một truyện cụ thể.
-     */
+    // Xóa lịch sử đọc của một truyện
     @Transactional
     public void deleteReadingHistory(Long storyId) {
         User currentUser = getCurrentUser();
         ReadingHistory history = readingHistoryRepository.findByUserIdAndStoryId(currentUser.getId(), storyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch sử đọc cho truyện này"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reading history not found for this story"));
 
         readingHistoryRepository.delete(history);
     }
 
-    /**
-     * Xóa tất cả lịch sử đọc của người dùng hiện tại.
-     */
+    // Xóa tất cả lịch sử đọc của người dùng
     @Transactional
     public void deleteAllReadingHistory() {
         User currentUser = getCurrentUser();
@@ -101,16 +91,16 @@ public class ReadingHistoryService {
     }
 
     /**
-     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
+     * Get current logged-in user from SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     /**
-     * Chuyển đổi ReadingHistory sang ReadingHistoryResponse DTO.
+     * Convert ReadingHistory to ReadingHistoryResponse DTO.
      */
     private ReadingHistoryResponse convertToResponse(ReadingHistory history) {
         return ReadingHistoryResponse.builder()

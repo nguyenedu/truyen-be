@@ -13,58 +13,47 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/favorites")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")  // Tất cả API đều cần đăng nhập
+@PreAuthorize("isAuthenticated()") // All APIs require authentication
 public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
-    /*
-     *Lấy danh sách truyện yêu thích của mình
-     */
+    // Lấy danh sách truyện yêu thích của tôi
     @GetMapping
     public ResponseEntity<ApiResponse<Page<FavoriteResponse>>> getMyFavorites(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Page<FavoriteResponse> favorites = favoriteService.getMyFavorites(page, size);
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu thích thành công", favorites));
+        return ResponseEntity.ok(ApiResponse.success("Get favorite list successfully", favorites));
     }
 
-    /*
-     *Kiểm tra truyện đã yêu thích chưa
-     */
+    // Kiểm tra xem truyện có nằm trong danh sách yêu thích không
     @GetMapping("/check/{storyId}")
     public ResponseEntity<ApiResponse<Boolean>> isFavorite(@PathVariable Long storyId) {
         Boolean isFavorite = favoriteService.isFavorite(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Kiểm tra thành công", isFavorite));
+        return ResponseEntity.ok(ApiResponse.success("Check successfully", isFavorite));
     }
 
-    /*
-        * Thêm truyện vào yêu thích
-        */
+    // Thêm truyện vào danh sách yêu thích
     @PostMapping("/{storyId}")
     public ResponseEntity<ApiResponse<FavoriteResponse>> addFavorite(@PathVariable Long storyId) {
         FavoriteResponse favorite = favoriteService.addFavorite(storyId);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Thêm vào yêu thích thành công", favorite));
+                .body(ApiResponse.success("Added to favorites successfully", favorite));
     }
 
-    /*
-     *Xóa truyện khỏi yêu thích
-     */
+    // Xóa truyện khỏi danh sách yêu thích
     @DeleteMapping("/{storyId}")
     public ResponseEntity<ApiResponse<String>> removeFavorite(@PathVariable Long storyId) {
         favoriteService.removeFavorite(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Xóa khỏi yêu thích thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Removed from favorites successfully", null));
     }
 
-    /*
-     *Đếm số lượt thích của truyện
-     */
+    // Đếm tổng số lượt yêu thích của truyện
     @GetMapping("/count/{storyId}")
     public ResponseEntity<ApiResponse<Long>> countFavorites(@PathVariable Long storyId) {
         Long count = favoriteService.countFavoritesByStoryId(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Đếm số lượt yêu thích thành công", count));
+        return ResponseEntity.ok(ApiResponse.success("Count favorites successfully", count));
     }
 }

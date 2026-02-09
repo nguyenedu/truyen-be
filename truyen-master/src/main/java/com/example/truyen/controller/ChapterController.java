@@ -20,28 +20,22 @@ public class ChapterController {
 
     private final ChapterService chapterService;
 
-    /**
-     * Lấy danh sách tất cả chương của một truyện cụ thể.
-     */
+    // Lấy danh sách chương của truyện
     @GetMapping("/story/{storyId}")
     public ResponseEntity<ApiResponse<List<ChapterResponse>>> getChaptersByStoryId(
             @PathVariable Long storyId) {
         List<ChapterResponse> chapters = chapterService.getChaptersByStoryId(storyId);
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách chương thành công", chapters));
+        return ResponseEntity.ok(ApiResponse.success("Get chapter list successfully", chapters));
     }
 
-    /**
-     * Lấy chi tiết chương theo ID.
-     */
+    // Lấy chi tiết chương theo ID
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ChapterResponse>> getChapterById(@PathVariable Long id) {
         ChapterResponse chapter = chapterService.getChapterById(id);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin chương thành công", chapter));
+        return ResponseEntity.ok(ApiResponse.success("Get chapter details successfully", chapter));
     }
 
-    /**
-     * Lấy chương theo ID truyện và số thứ tự chương.
-     */
+    // Lấy chương theo ID truyện và số thứ tự chương
     @GetMapping("/story/{storyId}/number/{chapterNumber}")
     public ResponseEntity<ApiResponse<ChapterResponse>> getChapterByStoryAndNumber(
             @PathVariable Long storyId,
@@ -50,9 +44,7 @@ public class ChapterController {
         return ResponseEntity.ok(ApiResponse.success("Chapter retrieved successfully", chapter));
     }
 
-    /**
-     * Tạo chương mới.
-     */
+    // Tạo chương mới (Admin)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> createChapter(
@@ -60,28 +52,24 @@ public class ChapterController {
         ChapterResponse chapter = chapterService.createChapter(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo chương mới thành công", chapter));
+                .body(ApiResponse.success("Create new chapter successfully", chapter));
     }
 
-    /**
-     * Cập nhật chương đã tồn tại.
-     */
+    // Cập nhật chương (Admin)
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ChapterResponse>> updateChapter(
             @PathVariable Long id,
             @Valid @RequestBody ChapterRequest request) {
         ChapterResponse chapter = chapterService.updateChapter(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật chương thành công", chapter));
+        return ResponseEntity.ok(ApiResponse.success("Update chapter successfully", chapter));
     }
 
-    /**
-     * Xóa một chương.
-     */
+    // Xóa chương (Admin)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteChapter(@PathVariable Long id) {
         chapterService.deleteChapter(id);
-        return ResponseEntity.ok(ApiResponse.success("Xóa chương thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Delete chapter successfully", null));
     }
 }

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Controller cho Search Analytics APIs
+ * Controller for Search Analytics APIs
  */
 @RestController
 @RequestMapping("/api/search")
@@ -21,10 +21,7 @@ public class SearchAnalyticsController {
 
     private final SearchAnalyticsService searchAnalyticsService;
 
-    /**
-     * Auto-suggest API
-     * GET /api/search/suggest?q=truyen
-     */
+    // Gợi ý từ khóa tìm kiếm (Auto-suggest)
     @GetMapping("/suggest")
     public ResponseEntity<List<String>> getAutoSuggest(
             @RequestParam String q,
@@ -33,7 +30,7 @@ public class SearchAnalyticsController {
 
         Long userId = null;
         if (authentication != null && authentication.isAuthenticated()) {
-            // Lấy userId từ authentication nếu cần
+            // Get userId from authentication if needed
             // userId = ((User) authentication.getPrincipal()).getId();
         }
 
@@ -41,10 +38,7 @@ public class SearchAnalyticsController {
         return ResponseEntity.ok(suggestions);
     }
 
-    /**
-     * Trending searches API
-     * GET /api/search/trending?limit=10
-     */
+    // Lấy từ khóa tìm kiếm xu hướng
     @GetMapping("/trending")
     public ResponseEntity<Set<String>> getTrendingSearches(
             @RequestParam(defaultValue = "10") int limit) {
@@ -53,10 +47,7 @@ public class SearchAnalyticsController {
         return ResponseEntity.ok(trending);
     }
 
-    /**
-     * Popular searches API
-     * GET /api/search/popular?limit=10
-     */
+    // Lấy từ khóa tìm kiếm phổ biến
     @GetMapping("/popular")
     public ResponseEntity<Map<String, Object>> getPopularSearches(
             @RequestParam(defaultValue = "10") int limit,
@@ -75,10 +66,7 @@ public class SearchAnalyticsController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * User search history API
-     * GET /api/search/history
-     */
+    // Lấy lịch sử tìm kiếm của người dùng
     @GetMapping("/history")
     public ResponseEntity<Set<String>> getUserSearchHistory(
             @RequestParam(defaultValue = "20") int limit,
@@ -88,9 +76,9 @@ public class SearchAnalyticsController {
             return ResponseEntity.ok(Set.of());
         }
 
-        // Lấy userId từ authentication
+        // Get userId from authentication
         // Long userId = ((User) authentication.getPrincipal()).getId();
-        Long userId = 1L; // Temporary, cần lấy từ authentication
+        Long userId = 1L; // Temporary, need to get from authentication
 
         Set<String> history = searchAnalyticsService.getUserSearchHistory(userId, limit);
         return ResponseEntity.ok(history);

@@ -21,25 +21,19 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Xác thực người dùng và trả về token.
-     */
+    // Đăng nhập
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", authService.login(request)));
+        return ResponseEntity.ok(ApiResponse.success("Login successfully", authService.login(request)));
     }
 
-    /**
-     * Đăng ký người dùng mới.
-     */
+    // Đăng ký tài khoản
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.register(request), null));
     }
 
-    /**
-     * Đăng xuất người dùng hiện tại bằng cách hủy token.
-     */
+    // Đăng xuất
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
@@ -49,24 +43,20 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success(authService.logout(bearerToken.substring(7)), null));
         }
 
-        return ResponseEntity.badRequest().body(ApiResponse.error("Token không hợp lệ"));
+        return ResponseEntity.badRequest().body(ApiResponse.error("Invalid token"));
     }
 
-    /**
-     * Yêu cầu khôi phục mật khẩu.
-     */
+    // Yêu cầu quên mật khẩu
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        String token = authService.generateResetToken(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success("Mã khôi phục đã được tạo", token));
+        var token = authService.generateResetToken(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("Reset token generated", token));
     }
 
-    /**
-     * Đặt lại mật khẩu.
-     */
+    // Đặt lại mật khẩu
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.getToken(), request.getNewPassword());
-        return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
     }
 }

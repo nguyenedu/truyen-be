@@ -1,8 +1,6 @@
 package com.example.truyen.config;
 
-
-
-//Class này được tạo ra khi mà web mới tạo nên chưa có SuperAdmin để quản lý
+// This class is created when the web is newly created, so there is no SuperAdmin to manage it
 
 import com.example.truyen.entity.User;
 import com.example.truyen.repository.UserRepository;
@@ -16,7 +14,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Slf4j
 public class CreateSuperAdmin implements CommandLineRunner {
-
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -36,11 +33,11 @@ public class CreateSuperAdmin implements CommandLineRunner {
                     .isActive(true)
                     .build();
             userRepository.save(superAdmin);
-            log.info("Tài khoản Super Admin đã được tạo thành công");
-            log.info("usernam: superadmin");
+            log.info("Super Admin account created successfully");
+            log.info("username: superadmin");
             log.info("password: 123456");
-        }else{
-            log.info(" Đã tồn tại tài khoản SUPER_ADMIN");
+        } else {
+            log.info("SUPER_ADMIN account already exists");
         }
     }
 }

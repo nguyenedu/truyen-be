@@ -29,15 +29,12 @@ public class DashboardService {
     private final AuthorRepository authorRepository;
     private final ActivityLogRepository activityLogRepository;
 
-    /**
-     * Lấy số liệu thống kê tổng hợp bảng điều khiển cho một khoảng thời gian nhất
-     * định.
-     */
+    // Lấy toàn bộ thống kê dashboard (theo tuần/tháng)
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats(String period) {
-        DashboardStatsResponse stats = new DashboardStatsResponse();
+        var stats = new DashboardStatsResponse();
 
-        LocalDateTime now = LocalDateTime.now();
+        var now = LocalDateTime.now();
         LocalDateTime currentPeriodStart;
         LocalDateTime previousPeriodStart;
         LocalDateTime previousPeriodEnd;
@@ -255,13 +252,13 @@ public class DashboardService {
         long days = duration.toDays();
 
         if (minutes < 1)
-            return "Vừa xong";
+            return "Just now";
         if (minutes < 60)
-            return minutes + " phút trước";
+            return minutes + " minutes ago";
         if (hours < 24)
-            return hours + " giờ trước";
+            return hours + " hours ago";
         if (days < 30)
-            return days + " ngày trước";
+            return days + " days ago";
         return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
 }

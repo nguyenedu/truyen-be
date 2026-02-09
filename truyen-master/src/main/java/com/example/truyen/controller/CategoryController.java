@@ -20,53 +20,43 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    /**
-     * Lấy danh sách tất cả thể loại.
-     */
+    // Lấy danh sách tất cả danh mục
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
         return ResponseEntity
-                .ok(ApiResponse.success("Lấy danh sách thể loại thành công", categoryService.getAllCategories()));
+                .ok(ApiResponse.success("Get all categories successfully", categoryService.getAllCategories()));
     }
 
-    /**
-     * Lấy chi tiết thể loại theo ID.
-     */
+    // Lấy chi tiết danh mục theo ID
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long id) {
         return ResponseEntity
-                .ok(ApiResponse.success("Lấy thông tin thể loại thành công", categoryService.getCategoryById(id)));
+                .ok(ApiResponse.success("Get category details successfully", categoryService.getCategoryById(id)));
     }
 
-    /**
-     * Tạo thể loại mới.
-     */
+    // Tạo danh mục mới (Admin)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(@Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Tạo thể loại thành công", categoryService.createCategory(request)));
+                .body(ApiResponse.success("Create category successfully", categoryService.createCategory(request)));
     }
 
-    /**
-     * Cập nhật thể loại đã tồn tại.
-     */
+    // Cập nhật danh mục (Admin)
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequest request) {
         return ResponseEntity
-                .ok(ApiResponse.success("Cập nhật thể loại thành công", categoryService.updateCategory(id, request)));
+                .ok(ApiResponse.success("Update category successfully", categoryService.updateCategory(id, request)));
     }
 
-    /**
-     * Xóa một thể loại.
-     */
+    // Xóa danh mục (Admin)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
-        return ResponseEntity.ok(ApiResponse.success("Xóa thể loại thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Delete category successfully", null));
     }
 }

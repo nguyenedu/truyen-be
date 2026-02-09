@@ -22,7 +22,7 @@ public class RedisConfig {
                 RedisTemplate<String, Object> template = new RedisTemplate<>();
                 template.setConnectionFactory(connectionFactory);
 
-                // Bộ tuần tự hóa cho khóa
+                // Serializer for keys
                 StringRedisSerializer stringSerializer = new StringRedisSerializer();
                 template.setKeySerializer(stringSerializer);
                 template.setHashKeySerializer(stringSerializer);
@@ -46,7 +46,7 @@ public class RedisConfig {
                                 ObjectMapper.DefaultTyping.NON_FINAL,
                                 JsonTypeInfo.As.PROPERTY);
 
-                // Bộ tuần tự hóa cho giá trị với ObjectMapper tùy chỉnh
+                // Serializer for values with custom ObjectMapper
                 GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(
                                 objectMapper);
 

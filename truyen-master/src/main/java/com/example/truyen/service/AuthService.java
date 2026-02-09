@@ -30,9 +30,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final TokenBlacklistService tokenBlacklistService;
 
-    /**
-     * Xác thực người dùng và tạo mã thông báo JWT.
-     */
+    // Xác thực người dùng và tạo token JWT
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -42,7 +40,7 @@ public class AuthService {
         String token = jwtTokenProvider.generateToken(authentication);
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BadRequestException("Người dùng không tồn tại"));
+                .orElseThrow(() -> new BadRequestException("User not found"));
 
         return new AuthResponse(
                 token,
@@ -52,17 +50,15 @@ public class AuthService {
                 user.getRole().name());
     }
 
-    /**
-     * Đăng ký người dùng mới với vai trò mặc định.
-     */
+    // Đăng ký tài khoản mới với vai trò mặc định
     @Transactional
     public String register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BadRequestException("Tên đăng nhập đã tồn tại");
+            throw new BadRequestException("Username already exists");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email đã tồn tại");
+            throw new BadRequestException("Email already exists");
         }
 
         User user = User.builder()
@@ -76,31 +72,27 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return "Đăng ký thành công";
+        return "Register successfully";
     }
 
-    /**
-     * Đăng xuất người dùng bằng cách vô hiệu hóa mã thông báo JWT hiện tại.
-     */
+    // Đăng xuất và blacklist token
     @Transactional
     public String logout(String token) {
         try {
             long expirationTime = jwtTokenProvider.getExpirationTimeMillis(token);
             tokenBlacklistService.blacklistToken(token, expirationTime);
-            return "Đăng xuất thành công";
+            return "Logout successfully";
         } catch (Exception e) {
-            throw new BadRequestException("Mã thông báo không hợp lệ");
+            throw new BadRequestException("Invalid token");
         }
     }
 
-    /**
-     * Tạo mã thông báo khôi phục mật khẩu.
-     */
+    // Tạo token đặt lại mật khẩu
     @Transactional
     public String generateResetToken(String email) {
         log.debug("Generating reset token for email: {}", email);
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("Không tìm thấy người dùng với email này"));
+                .orElseThrow(() -> new BadRequestException("User not found with this email"));
 
         String token = UUID.randomUUID().toString();
         user.setResetPasswordToken(token);
@@ -111,16 +103,14 @@ public class AuthService {
         return token;
     }
 
-    /**
-     * Đặt lại mật khẩu mới bằng mã thông báo.
-     */
+    // Đặt lại mật khẩu bằng token
     @Transactional
     public void resetPassword(String token, String newPassword) {
         User user = userRepository.findByResetPasswordToken(token)
-                .orElseThrow(() -> new BadRequestException("Mã khôi phục không hợp lệ hoặc đã qua sử dụng"));
+                .orElseThrow(() -> new BadRequestException("Invalid or used reset token"));
 
         if (user.getResetPasswordTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Mã khôi phục đã hết hạn");
+            throw new BadRequestException("Reset token expired");
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));

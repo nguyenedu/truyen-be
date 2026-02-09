@@ -19,77 +19,63 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    /**
-     * Lấy bình luận của một truyện cụ thể.
-     */
+    // Lấy danh sách bình luận của truyện
     @GetMapping("/story/{storyId}")
     public ResponseEntity<ApiResponse<Page<CommentResponse>>> getCommentsByStoryId(
             @PathVariable Long storyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bình luận thành công",
+        return ResponseEntity.ok(ApiResponse.success("Get comment list successfully",
                 commentService.getCommentsByStoryId(storyId, page, size)));
     }
 
-    /**
-     * Lấy bình luận của một chương cụ thể.
-     */
+    // Lấy danh sách bình luận của chương
     @GetMapping("/chapter/{chapterId}")
     public ResponseEntity<ApiResponse<Page<CommentResponse>>> getCommentsByChapterId(
             @PathVariable Long chapterId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bình luận thành công",
+        return ResponseEntity.ok(ApiResponse.success("Get comment list successfully",
                 commentService.getCommentsByChapterId(chapterId, page, size)));
     }
 
-    /**
-     * Tạo bình luận mới.
-     */
+    // Đăng bình luận mới
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> createComment(@Valid @RequestBody CommentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Đăng bình luận thành công", commentService.createComment(request)));
+                .body(ApiResponse.success("Post comment successfully", commentService.createComment(request)));
     }
 
-    /**
-     * Cập nhật bình luận hiện có.
-     */
+    // Cập nhật bình luận
     @PutMapping("/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> updateComment(
             @PathVariable("commentId") Long commentId,
             @Valid @RequestBody CommentRequest request) {
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật bình luận thành công",
+        return ResponseEntity.ok(ApiResponse.success("Update comment successfully",
                 commentService.updateComment(commentId, request)));
     }
 
-    /**
-     * Xóa một bình luận.
-     */
+    // Xóa bình luận
     @DeleteMapping("/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<String>> deleteComment(@PathVariable("commentId") Long commentId) {
         commentService.deleteComment(commentId);
-        return ResponseEntity.ok(ApiResponse.success("Xóa bình luận thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Delete comment successfully", null));
     }
 
-    /**
-     * Đếm tổng số bình luận của một truyện.
-     */
+    // Đếm số bình luận của truyện
     @GetMapping("/count/story/{storyId}")
     public ResponseEntity<ApiResponse<Long>> countCommentsByStoryId(@PathVariable Long storyId) {
-        return ResponseEntity.ok(ApiResponse.success("Lấy số lượng thành công",
+        return ResponseEntity.ok(ApiResponse.success("Get count successfully",
                 commentService.countCommentsByStoryId(storyId)));
     }
 
-    /**
-     * Đếm tổng số bình luận của một chương.
-     */
+    // Đếm số bình luận của chương
     @GetMapping("/count/chapter/{chapterId}")
     public ResponseEntity<ApiResponse<Long>> countCommentsByChapterId(@PathVariable Long chapterId) {
-        return ResponseEntity.ok(ApiResponse.success("Lấy số lượng thành công",
+        return ResponseEntity.ok(ApiResponse.success("Get count successfully",
                 commentService.countCommentsByChapterId(chapterId)));
     }
 }

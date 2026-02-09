@@ -28,10 +28,7 @@ public class CommentService {
     private final ChapterRepository chapterRepository;
     private final CommentLikeRepository commentLikeRepository;
 
-    /**
-     * Lấy danh sách bình luận của truyện với phân trang, sắp xếp theo ngày tạo
-     * (giảm dần).
-     */
+    // Lấy danh sách bình luận truyện (phân trang, mới nhất trước)
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByStoryId(Long storyId, int page, int size) {
         storyRepository.findById(storyId)
@@ -41,9 +38,7 @@ public class CommentService {
                 .map(this::convertToResponse);
     }
 
-    /**
-     * Lấy danh sách bình luận của một chương cụ thể với phân trang.
-     */
+    // Lấy danh sách bình luận chương (phân trang)
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByChapterId(Long chapterId, int page, int size) {
         chapterRepository.findById(chapterId)
@@ -53,15 +48,13 @@ public class CommentService {
                 .map(this::convertToResponse);
     }
 
-    /**
-     * Tạo bình luận mới liên kết với truyện hoặc chương.
-     */
+    // Tạo bình luận mới (gắn với truyện hoặc chương)
     @Transactional
     public CommentResponse createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
 
         if (request.getStoryId() == null && request.getChapterId() == null) {
-            throw new BadRequestException("Phải cung cấp ID truyện hoặc ID chương");
+            throw new BadRequestException("Story ID or Chapter ID must be provided");
         }
 
         Story story = null;
@@ -91,9 +84,7 @@ public class CommentService {
         return convertToResponse(commentRepository.save(comment));
     }
 
-    /**
-     * Cập nhật nội dung bình luận nếu người dùng có quyền sở hữu.
-     */
+    // Cập nhật nội dung bình luận (kiểm tra quyền sở hữu)
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentRequest request) {
         User currentUser = getCurrentUser();
@@ -101,16 +92,14 @@ public class CommentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", "id", commentId));
 
         if (!comment.getUser().getId().equals(currentUser.getId())) {
-            throw new BadRequestException("Bạn không có quyền chỉnh sửa bình luận này");
+            throw new BadRequestException("You do not have permission to edit this comment");
         }
 
         comment.setContent(request.getContent());
         return convertToResponse(commentRepository.save(comment));
     }
 
-    /**
-     * Xóa bình luận nếu người dùng có quyền sở hữu hoặc là quản trị viên.
-     */
+    // Xóa bình luận (kiểm tra quyền sở hữu hoặc Admin)
     @Transactional
     public void deleteComment(Long commentId) {
         log.debug("Attempting to delete comment with ID: {}", commentId);
@@ -126,11 +115,11 @@ public class CommentService {
 
         if (!comment.getUser().getId().equals(currentUser.getId()) && !isAdmin) {
             log.warn("User {} does not have permission to delete comment {}", currentUser.getUsername(), commentId);
-            throw new BadRequestException("Bạn không có quyền xóa bình luận này");
+            throw new BadRequestException("You do not have permission to delete this comment");
         }
 
-        // Xóa tất cả lượt thích liên quan đến bình luận này trước khi xóa bình luận để
-        // tránh lỗi FK
+        // Delete all likes related to this comment before deleting comment to avoid FK
+        // error
         commentLikeRepository.deleteByCommentId(commentId);
         log.debug("Deleted likes for comment {}", commentId);
 
@@ -138,33 +127,29 @@ public class CommentService {
         log.debug("Successfully deleted comment {}", commentId);
     }
 
-    /**
-     * Lấy tổng số bình luận của một truyện.
-     */
+    // Đếm tổng số bình luận của truyện
     @Transactional(readOnly = true)
     public Long countCommentsByStoryId(Long storyId) {
         return commentRepository.countByStoryId(storyId);
     }
 
-    /**
-     * Lấy tổng số bình luận của một chương.
-     */
+    // Đếm tổng số bình luận của chương
     @Transactional(readOnly = true)
     public Long countCommentsByChapterId(Long chapterId) {
         return commentRepository.countByChapterId(chapterId);
     }
 
     /**
-     * Lấy người dùng hiện tại đang đăng nhập từ SecurityContext.
+     * Get current logged-in user from SecurityContext.
      */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tìm thấy"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     /**
-     * Chuyển đổi Comment sang CommentResponse DTO.
+     * Convert Comment to CommentResponse DTO.
      */
     private CommentResponse convertToResponse(Comment comment) {
         boolean isLiked = false;

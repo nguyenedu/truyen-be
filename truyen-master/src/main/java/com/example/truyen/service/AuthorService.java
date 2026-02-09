@@ -20,9 +20,7 @@ public class AuthorService {
 
     private final AuthorRepository authorRepository;
 
-    /**
-     * Lấy danh sách tất cả tác giả.
-     */
+    // Lấy tất cả tác giả (có hỗ trợ tìm kiếm theo tên)
     @Transactional(readOnly = true)
     public List<AuthorResponse> getAllAuthors() {
         List<Author> authors = authorRepository.findAll();
@@ -31,9 +29,7 @@ public class AuthorService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy chi tiết tác giả theo ID.
-     */
+    // Lấy thông tin chi tiết của tác giả
     @Transactional(readOnly = true)
     public AuthorResponse getAuthorById(Long id) {
         Author author = authorRepository.findById(id)
@@ -41,13 +37,11 @@ public class AuthorService {
         return convertToResponse(author);
     }
 
-    /**
-     * Tạo tác giả mới.
-     */
+    // Tạo mới tác giả
     @Transactional
     public AuthorResponse createAuthor(AuthorRequest request) {
         if (authorRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
+            throw new BadRequestException("Author '" + request.getName() + "' already exists");
         }
 
         Author author = Author.builder()
@@ -60,9 +54,7 @@ public class AuthorService {
         return convertToResponse(savedAuthor);
     }
 
-    /**
-     * Cập nhật thông tin tác giả hiện có.
-     */
+    // Cập nhật thông tin tác giả
     @Transactional
     public AuthorResponse updateAuthor(Long id, AuthorRequest request) {
         Author author = authorRepository.findById(id)
@@ -70,7 +62,7 @@ public class AuthorService {
 
         if (request.getName() != null && !author.getName().equals(request.getName())) {
             if (authorRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Tác giả '" + request.getName() + "' đã tồn tại");
+                throw new BadRequestException("Author '" + request.getName() + "' already exists");
             }
             author.setName(request.getName());
         }
@@ -87,9 +79,7 @@ public class AuthorService {
         return convertToResponse(updatedAuthor);
     }
 
-    /**
-     * Xóa tác giả theo ID.
-     */
+    // Xóa tác giả
     @Transactional
     public void deleteAuthor(Long id) {
         Author author = authorRepository.findById(id)
@@ -98,7 +88,7 @@ public class AuthorService {
     }
 
     /**
-     * Tìm kiếm tác giả theo tên có chứa từ khóa.
+     * Search authors by name containing keyword.
      */
     @Transactional(readOnly = true)
     public List<AuthorResponse> searchAuthors(String name) {
@@ -116,7 +106,7 @@ public class AuthorService {
     }
 
     /**
-     * Chuyển đổi Author sang AuthorResponse DTO.
+     * Convert Author to AuthorResponse DTO.
      */
     private AuthorResponse convertToResponse(Author author) {
         return AuthorResponse.builder()

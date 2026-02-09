@@ -34,37 +34,31 @@ public class StoryService {
     private final SearchProducer searchProducer;
     private final RatingRepository ratingRepository;
 
-    /**
-     * Lấy danh sách tất cả truyện với phân trang.
-     */
+    // Lấy danh sách truyện (có phân trang)
     @Transactional(readOnly = true)
     public Page<StoryResponse> getAllStories(int page, int size) {
         return storyRepository.findAll(PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
-    /**
-     * Lấy chi tiết truyện theo ID.
-     */
+    // Lấy chi tiết truyện theo ID
     @Transactional(readOnly = true)
     public StoryResponse getStoryById(Long id) {
-        Story story = storyRepository.findById(id)
+        var story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", id));
         return convertToResponse(story);
     }
 
-    /**
-     * Tìm kiếm truyện theo tiêu đề với phân trang.
-     */
+    // Tìm kiếm truyện và gửi event tracking
     @Transactional(readOnly = true)
     public Page<StoryResponse> searchStories(String keyword, int page, int size) {
-        Page<StoryResponse> results = storyRepository.searchByTitle(keyword, PageRequest.of(page, size))
+        var results = storyRepository.searchByTitle(keyword, PageRequest.of(page, size))
                 .map(this::convertToResponse);
 
-        // Gửi search event vào Kafka để analytics
+        // Gửi event search vào Kafka
         try {
-            SearchEvent searchEvent = SearchEvent.create(
+            var searchEvent = SearchEvent.create(
                     keyword,
-                    null, // userId - có thể lấy từ SecurityContext nếu cần
+                    null,
                     (int) results.getTotalElements());
             searchProducer.sendSearchEvent(searchEvent);
         } catch (Exception e) {
@@ -74,35 +68,27 @@ public class StoryService {
         return results;
     }
 
-    /**
-     * Lấy danh sách truyện thuộc một thể loại cụ thể.
-     */
+    // Lấy truyện theo danh mục
     @Transactional(readOnly = true)
     public Page<StoryResponse> getStoriesByCategory(Long categoryId, int page, int size) {
         return storyRepository.findByCategoryId(categoryId, PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
-    /**
-     * Lấy danh sách truyện được hiển thị là HOT.
-     */
+    // Lấy danh sách truyện HOT
     public Page<StoryResponse> getHotStories(int page, int size) {
         return storyRepository.findByIsHotTrue(PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
-    /**
-     * Lấy danh sách truyện mới nhất sắp xếp theo ngày tạo.
-     */
+    // Lấy danh sách truyện mới nhất
     @Transactional(readOnly = true)
     public Page<StoryResponse> getLatestStories(int page, int size) {
         return storyRepository.findAllOrderByCreatedAtDesc(PageRequest.of(page, size)).map(this::convertToResponse);
     }
 
-    /**
-     * Tạo truyện mới.
-     */
+    // Tạo truyện mới
     @Transactional
     public StoryResponse createStory(StoryRequest request) {
-        Author author = authorRepository.findById(request.getAuthorId())
+        var author = authorRepository.findById(request.getAuthorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Author", "id", request.getAuthorId()));
 
         Set<Category> categories = new HashSet<>();
@@ -113,16 +99,16 @@ public class StoryService {
                     .collect(Collectors.toSet());
         }
 
-        Story.Status status = Story.Status.ONGOING;
+        var status = Story.Status.ONGOING;
         if (request.getStatus() != null) {
             try {
                 status = Story.Status.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Trạng thái không hợp lệ: " + request.getStatus());
+                throw new BadRequestException("Invalid status: " + request.getStatus());
             }
         }
 
-        Story story = Story.builder()
+        var story = Story.builder()
                 .title(request.getTitle())
                 .author(author)
                 .description(request.getDescription())
@@ -137,22 +123,20 @@ public class StoryService {
         return convertToResponse(storyRepository.save(story));
     }
 
-    /**
-     * Cập nhật thông tin truyện hiện có.
-     */
+    // Cập nhật thông tin truyện
     @Transactional
     public StoryResponse updateStory(Long id, StoryRequest request) {
-        Story story = storyRepository.findById(id)
+        var story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", id));
 
         if (request.getAuthorId() != null) {
-            Author author = authorRepository.findById(request.getAuthorId())
+            var author = authorRepository.findById(request.getAuthorId())
                     .orElseThrow(() -> new ResourceNotFoundException("Author", "id", request.getAuthorId()));
             story.setAuthor(author);
         }
 
         if (request.getCategoryIds() != null) {
-            Set<Category> categories = request.getCategoryIds().stream()
+            var categories = request.getCategoryIds().stream()
                     .map(categoryId -> categoryRepository.findById(categoryId)
                             .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId)))
                     .collect(Collectors.toSet());
@@ -169,37 +153,31 @@ public class StoryService {
             try {
                 story.setStatus(Story.Status.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Trạng thái không hợp lệ: " + request.getStatus());
+                throw new BadRequestException("Invalid status: " + request.getStatus());
             }
         }
 
         return convertToResponse(storyRepository.save(story));
     }
 
-    /**
-     * Xóa truyện theo ID.
-     */
+    // Xóa truyện
     @Transactional
     public void deleteStory(Long id) {
-        Story story = storyRepository.findById(id)
+        var story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", id));
         storyRepository.delete(story);
     }
 
-    /**
-     * Tăng tổng số lượt xem của truyện.
-     */
+    // Tăng lượt xem truyện
     @Transactional
     public void increaseView(Long id) {
-        Story story = storyRepository.findById(id)
+        var story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", id));
         story.setTotalViews(story.getTotalViews() + 1);
         storyRepository.save(story);
     }
 
-    /**
-     * Lọc truyện nâng cao dựa trên nhiều tiêu chí.
-     */
+    // Lọc truyện nâng cao
     @Transactional(readOnly = true)
     public Page<StoryResponse> filterStories(
             String keyword,
@@ -213,12 +191,12 @@ public class StoryService {
             int page,
             int size,
             String sort) {
-        String[] sortParams = sort.split(",");
-        String sortField = sortParams[0];
-        String sortDir = sortParams.length > 1 ? sortParams[1] : "asc";
+        var sortParams = sort.split(",");
+        var sortField = sortParams[0];
+        var sortDir = sortParams.length > 1 ? sortParams[1] : "asc";
 
-        Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+        var direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        var pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
 
         Story.Status storyStatus = null;
         if (status != null && !status.trim().isEmpty()) {
@@ -229,7 +207,7 @@ public class StoryService {
             }
         }
 
-        Integer categoryCount = (categoryIds != null && !categoryIds.isEmpty())
+        var categoryCount = (categoryIds != null && !categoryIds.isEmpty())
                 ? categoryIds.size()
                 : null;
 
@@ -246,9 +224,7 @@ public class StoryService {
                 pageable).map(this::convertToResponse);
     }
 
-    /**
-     * Lấy danh sách tất cả truyện của một tác giả cụ thể.
-     */
+    // Lấy danh sách truyện của tác giả
     @Transactional(readOnly = true)
     public List<StoryResponse> getStoriesByAuthor(Long authorId) {
         return storyRepository.findByAuthorId(authorId)
@@ -257,17 +233,14 @@ public class StoryService {
                 .toList();
     }
 
-    /**
-     * Chuyển đổi Story sang StoryResponse DTO.
-     */
     private StoryResponse convertToResponse(Story story) {
-        Set<String> categoryNames = story.getCategories().stream()
+        var categoryNames = story.getCategories().stream()
                 .map(Category::getName)
                 .collect(Collectors.toSet());
 
         // Fetch rating data
-        Double averageRating = ratingRepository.getAverageRating(story.getId());
-        Long totalRatingsCount = ratingRepository.countByStoryId(story.getId());
+        var averageRating = ratingRepository.getAverageRating(story.getId());
+        var totalRatingsCount = ratingRepository.countByStoryId(story.getId());
 
         return StoryResponse.builder()
                 .id(story.getId())

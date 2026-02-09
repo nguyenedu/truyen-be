@@ -14,13 +14,11 @@ public class CommentLikeController {
 
     private final CommentLikeService commentLikeService;
 
-    /**
-     * Thích hoặc bỏ thích bình luận.
-     */
+    // Thích hoặc bỏ thích bình luận
     @PostMapping("/toggle/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> toggleLike(@PathVariable("commentId") Long commentId) {
         commentLikeService.toggleLike(commentId);
-        return ResponseEntity.ok(ApiResponse.success("Thao tác thành công", null));
+        return ResponseEntity.ok(ApiResponse.success("Operation successful", null));
     }
 }

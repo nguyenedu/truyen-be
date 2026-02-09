@@ -24,6 +24,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TrendingService {
 
+    private static final double VIEW_WEIGHT = 40.0;
+    private static final double RATING_WEIGHT = 20.0;
+    private static final double ENGAGEMENT_WEIGHT = 30.0;
+    private static final double RECENCY_WEIGHT = 10.0;
+
+    private static final int FAVORITE_SCORE = 3;
+    private static final int COMMENT_SCORE = 2;
+    private static final int RATING_SCORE = 2;
+
     private final RedisTemplate<String, Object> redisTemplate;
     private final StoryRepository storyRepository;
     private final RatingRepository ratingRepository;
@@ -32,111 +41,104 @@ public class TrendingService {
     private final RankingRepository rankingRepository;
     private final StoryViewService viewService;
 
-    /**
-     * Tính toán điểm xu hướng cho truyện dựa trên nhiều tiêu chí:
-     * - Điểm lượt xem (40%)
-     * - Điểm đánh giá (20%)
-     * - Điểm tương tác (30%)
-     * - Điểm độ mới (10%)
-     */
+    // Logic cốt lõi tính toán và cập nhật xu hướng (DB + Redis)
     public double calculateTrendingScore(Story story, int days) {
         try {
-            // 1. View Score (40%)
+            // 1. Điểm lượt xem (40%)
             long recentViews = viewService.getRecentViews(story.getId(), days);
             Long maxViews = getMaxRecentViews(days);
-            double viewScore = maxViews > 0 ? (recentViews * 40.0 / maxViews) : 0;
+            double viewScore = maxViews > 0 ? (recentViews * VIEW_WEIGHT / maxViews) : 0;
 
-            // 2. Rating Score (20%)
+            // 2. Điểm đánh giá (20%)
             Double avgRating = ratingRepository.getAverageRating(story.getId());
-            double ratingScore = avgRating != null ? (avgRating / 5.0 * 20.0) : 0;
+            double ratingScore = avgRating != null ? (avgRating / 5.0 * RATING_WEIGHT) : 0;
 
-            // 3. Engagement Score (30%): favorites, comments, and rating counts
+            // 3. Điểm tương tác (30%): yêu thích, bình luận, đánh giá
             Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
             Long commentCount = commentRepository.countByStoryId(story.getId());
             Long ratingCount = ratingRepository.countByStoryId(story.getId());
 
-            double engagement = (favoriteCount * 3) + (commentCount * 2) + (ratingCount * 2);
-            double engagementScore = Math.min(engagement / 100.0 * 30.0, 30.0);
+            double engagement = (favoriteCount * FAVORITE_SCORE) + (commentCount * COMMENT_SCORE)
+                    + (ratingCount * RATING_SCORE);
+            double engagementScore = Math.min(engagement / 100.0 * ENGAGEMENT_WEIGHT, ENGAGEMENT_WEIGHT);
 
-            // 4. Recency Score (10%): degradation over time since last update
+            // 4. Điểm độ mới (10%): giảm dần theo thời gian
             long daysSinceUpdate = 0;
             if (story.getUpdatedAt() != null) {
                 daysSinceUpdate = ChronoUnit.DAYS.between(story.getUpdatedAt().toLocalDate(), LocalDate.now());
             } else if (story.getCreatedAt() != null) {
                 daysSinceUpdate = ChronoUnit.DAYS.between(story.getCreatedAt().toLocalDate(), LocalDate.now());
             }
-            double recencyScore = 10.0 * Math.exp(-0.1 * daysSinceUpdate);
+            double recencyScore = RECENCY_WEIGHT * Math.exp(-0.1 * daysSinceUpdate);
 
             return viewScore + ratingScore + engagementScore + recencyScore;
         } catch (Exception e) {
-            log.error("Lỗi khi tính điểm xu hướng cho truyện có ID {}: {}", story.getId(), e.getMessage());
+            log.error("Error calculating trending score for story ID {}: {}", story.getId(), e.getMessage());
             return 0;
         }
     }
 
-    /**
-     * Làm mới bảng xếp hạng xu hướng HÀNG NGÀY mỗi 30 phút.
-     */
+    // Làm mới xu hướng HÀNG NGÀY mỗi 30 phút
     @Scheduled(cron = "0 */30 * * * *")
     @Transactional
     public void refreshDailyTrending() {
-        log.info("Bắt đầu làm mới xu hướng HÀNG NGÀY...");
+        log.info("Starting DAILY trending refresh...");
         refreshTrending(Ranking.RankingType.DAILY, 1, RedisKeyConstants.TRENDING_DAILY);
-        log.info("Hoàn tất làm mới xu hướng HÀNG NGÀY");
+        log.info("Completed DAILY trending refresh");
     }
 
-    /**
-     * Làm mới bảng xếp hạng xu hướng HÀNG TUẦN mỗi 2 giờ.
-     */
+    // Làm mới xu hướng HÀNG TUẦN mỗi 2 giờ
     @Scheduled(cron = "0 0 */2 * * *")
     @Transactional
     public void refreshWeeklyTrending() {
-        log.info("Bắt đầu làm mới xu hướng HÀNG TUẦN...");
+        log.info("Starting WEEKLY trending refresh...");
         refreshTrending(Ranking.RankingType.WEEKLY, 7, RedisKeyConstants.TRENDING_WEEKLY);
-        log.info("Hoàn tất làm mới xu hướng HÀNG TUẦN");
+        log.info("Completed WEEKLY trending refresh");
     }
 
-    /**
-     * Làm mới bảng xếp hạng xu hướng HÀNG THÁNG mỗi 6 giờ.
-     */
+    // Làm mới xu hướng HÀNG THÁNG mỗi 6 giờ
     @Scheduled(cron = "0 0 */6 * * *")
     @Transactional
     public void refreshMonthlyTrending() {
-        log.info("Bắt đầu làm mới xu hướng HÀNG THÁNG...");
+        log.info("Starting MONTHLY trending refresh...");
         refreshTrending(Ranking.RankingType.MONTHLY, 30, RedisKeyConstants.TRENDING_MONTHLY);
-        log.info("Hoàn tất làm mới xu hướng HÀNG THÁNG");
+        log.info("Completed MONTHLY trending refresh");
     }
 
     /**
      * Logic cốt lõi để tính điểm xu hướng và cập nhật cả cơ sở dữ liệu và bộ nhớ
      * đệm Redis.
      */
+    /**
+     * Logic cốt lõi để tính điểm xu hướng và cập nhật cả cơ sở dữ liệu và bộ nhớ
+     * đệm Redis.
+     */
     private void refreshTrending(Ranking.RankingType rankingType, int days, String redisKey) {
         try {
-            LocalDate today = LocalDate.now();
+            var today = LocalDate.now();
 
-            List<Story> stories = storyRepository.findByStatusInWithDetails(
+            var stories = storyRepository.findByStatusInWithDetails(
                     Arrays.asList(Story.Status.ONGOING, Story.Status.COMPLETED));
 
-            log.info("Đang tính toán xu hướng {} cho {} truyện", rankingType, stories.size());
+            log.info("Calculating {} trending for {} stories", rankingType, stories.size());
 
             if (stories.isEmpty()) {
-                log.warn("Không tìm thấy truyện đang hoạt động nào để tính toán xu hướng");
+                log.warn("No active stories found for trending calculation");
                 return;
             }
 
-            List<StoryTrendingDTO> trendingList = stories.parallelStream()
+            var trendingList = stories.parallelStream()
                     .map(story -> {
                         try {
                             double score = calculateTrendingScore(story, days);
-                            Double avgRating = ratingRepository.getAverageRating(story.getId());
-                            Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
-                            Long commentCount = commentRepository.countByStoryId(story.getId());
+                            var avgRating = ratingRepository.getAverageRating(story.getId());
+                            var favoriteCount = favoriteRepository.countByStoryId(story.getId());
+                            var commentCount = commentRepository.countByStoryId(story.getId());
 
-                            List<String> categoryNames = story.getCategories() != null
+                            var categoryNames = story.getCategories() != null
                                     ? story.getCategories().stream().map(cat -> cat.getName())
                                             .collect(Collectors.toList())
-                                    : new java.util.ArrayList<>();
+                                    : new java.util.ArrayList<String>();
 
                             return StoryTrendingDTO.builder()
                                     .id(story.getId())
@@ -154,7 +156,7 @@ public class TrendingService {
                                     .trendingScore(score)
                                     .build();
                         } catch (Exception e) {
-                            log.error("Không thể xử lý xu hướng cho truyện có ID {}: {}", story.getId(),
+                            log.error("Failed to process trending for story ID {}: {}", story.getId(),
                                     e.getMessage());
                             return null;
                         }
@@ -165,7 +167,7 @@ public class TrendingService {
                     .collect(Collectors.toList());
 
             if (trendingList.isEmpty()) {
-                log.warn("Tính toán xu hướng cho kết quả là danh sách trống");
+                log.warn("Trending calculation resulted in empty list");
                 return;
             }
 
@@ -175,7 +177,7 @@ public class TrendingService {
             for (StoryTrendingDTO dto : trendingList) {
                 final int currentRank = rank;
                 storyRepository.findById(dto.getId()).ifPresent(story -> {
-                    Ranking ranking = Ranking.builder()
+                    var ranking = Ranking.builder()
                             .story(story)
                             .rankPosition(currentRank)
                             .rankingType(rankingType)
@@ -188,16 +190,14 @@ public class TrendingService {
             }
 
             cacheToRedis(redisKey, trendingList, rankingType);
-            log.info("Làm mới thành công xu hướng {} với {} mục", rankingType, trendingList.size());
+            log.info("Successfully refreshed {} trending with {} items", rankingType, trendingList.size());
 
         } catch (Exception e) {
-            log.error("Lỗi nghiêm trọng trong quá trình làm mới xu hướng: {}", e.getMessage(), e);
+            log.error("Critical error during trending refresh: {}", e.getMessage(), e);
         }
     }
 
-    /**
-     * Lưu dữ liệu xu hướng vào Redis với thời gian sống (TTL) phù hợp.
-     */
+    // Lưu cache Redis với TTL tương ứng
     private void cacheToRedis(String redisKey, List<StoryTrendingDTO> trendingList, Ranking.RankingType rankingType) {
         try {
             redisTemplate.delete(redisKey);
@@ -223,10 +223,7 @@ public class TrendingService {
         }
     }
 
-    /**
-     * Lấy tổng số lượt xem tối đa của tất cả các truyện trong N ngày qua để chuẩn
-     * hóa điểm số.
-     */
+    // Lấy max view trong N ngày để chuẩn hóa điểm số
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
 
@@ -253,10 +250,7 @@ public class TrendingService {
         return max;
     }
 
-    /**
-     * Lấy danh sách truyện xu hướng cho một loại xếp hạng cụ thể.
-     * Cố gắng lấy từ Redis trước, nếu không có sẽ lấy từ cơ sở dữ liệu.
-     */
+    // Lấy danh sách xu hướng (ưu tiên Redis, fallback DB)
     @Transactional(readOnly = true)
     public List<StoryTrendingDTO> getTrending(Ranking.RankingType rankingType, int limit) {
         String redisKey = switch (rankingType) {
@@ -280,26 +274,24 @@ public class TrendingService {
         return getTrendingFromDB(rankingType, limit);
     }
 
-    /**
-     * Phương pháp dự phòng để lấy bảng xếp hạng xu hướng từ cơ sở dữ liệu.
-     */
+    // Lấy danh sách xu hướng từ DB
     private List<StoryTrendingDTO> getTrendingFromDB(Ranking.RankingType rankingType, int limit) {
         try {
-            List<Ranking> rankings = rankingRepository.findLatestByRankingType(rankingType);
+            var rankings = rankingRepository.findLatestByRankingType(rankingType);
 
             return rankings.stream()
                     .limit(limit)
                     .map(ranking -> {
                         try {
-                            Story story = ranking.getStory();
-                            Double avgRating = ratingRepository.getAverageRating(story.getId());
-                            Long favoriteCount = favoriteRepository.countByStoryId(story.getId());
-                            Long commentCount = commentRepository.countByStoryId(story.getId());
+                            var story = ranking.getStory();
+                            var avgRating = ratingRepository.getAverageRating(story.getId());
+                            var favoriteCount = favoriteRepository.countByStoryId(story.getId());
+                            var commentCount = commentRepository.countByStoryId(story.getId());
 
-                            List<String> categoryNames = story.getCategories() != null
+                            var categoryNames = story.getCategories() != null
                                     ? story.getCategories().stream().map(cat -> cat.getName())
                                             .collect(Collectors.toList())
-                                    : new java.util.ArrayList<>();
+                                    : new java.util.ArrayList<String>();
 
                             return StoryTrendingDTO.builder()
                                     .id(story.getId())
@@ -329,9 +321,7 @@ public class TrendingService {
         }
     }
 
-    /**
-     * Kích hoạt làm mới thủ công cho một khoảng thời gian xu hướng cụ thể.
-     */
+    // Trigger làm mới thủ công
     @Transactional
     public void manualRefresh(Ranking.RankingType rankingType) {
         switch (rankingType) {
@@ -341,14 +331,12 @@ public class TrendingService {
         }
     }
 
-    /**
-     * Xóa sạch các bảng xếp hạng lịch sử cũ hơn 90 ngày.
-     */
+    // Xóa bảng xếp hạng lịch sử cũ hơn 90 ngày
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void cleanupOldRankings() {
         LocalDate cutoffDate = LocalDate.now().minusDays(90);
         rankingRepository.deleteOlderThan(cutoffDate);
-        log.info("Đã xóa sạch các bảng xếp hạng lịch sử cũ hơn {}", cutoffDate);
+        log.info("Cleaned up old rankings older than {}", cutoffDate);
     }
 }

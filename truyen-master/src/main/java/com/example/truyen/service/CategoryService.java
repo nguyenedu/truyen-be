@@ -19,9 +19,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    /**
-     * Lấy danh sách tất cả thể loại.
-     */
+    // Lấy tất cả danh mục
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
@@ -30,9 +28,7 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy chi tiết thể loại theo ID.
-     */
+    // Lấy chi tiết danh mục theo ID
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
@@ -40,13 +36,11 @@ public class CategoryService {
         return convertToResponse(category);
     }
 
-    /**
-     * Tạo thể loại mới.
-     */
+    // Tạo danh mục mới
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
-            throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
+            throw new BadRequestException("Category '" + request.getName() + "' already exists");
         }
 
         Category category = Category.builder()
@@ -58,9 +52,7 @@ public class CategoryService {
         return convertToResponse(savedCategory);
     }
 
-    /**
-     * Cập nhật thông tin thể loại theo ID.
-     */
+    // Cập nhật thông tin danh mục
     @Transactional
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
@@ -68,7 +60,7 @@ public class CategoryService {
 
         if (request.getName() != null && !category.getName().equals(request.getName())) {
             if (categoryRepository.existsByName(request.getName())) {
-                throw new BadRequestException("Thể loại '" + request.getName() + "' đã tồn tại");
+                throw new BadRequestException("Category '" + request.getName() + "' already exists");
             }
             category.setName(request.getName());
         }
@@ -81,9 +73,7 @@ public class CategoryService {
         return convertToResponse(updatedCategory);
     }
 
-    /**
-     * Xóa thể loại theo ID.
-     */
+    // Xóa danh mục theo ID
     @Transactional
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
@@ -92,7 +82,7 @@ public class CategoryService {
     }
 
     /**
-     * Chuyển đổi Category sang CategoryResponse DTO.
+     * Convert Category to CategoryResponse DTO.
      */
     private CategoryResponse convertToResponse(Category category) {
         return CategoryResponse.builder()

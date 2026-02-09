@@ -23,6 +23,7 @@ public class CommentLikeService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
+    // Thực hiện thích hoặc bỏ thích bình luận (tự động cập nhật số lượt thích)
     @Transactional
     public void toggleLike(Long commentId) {
         User currentUser = getCurrentUser();
@@ -49,6 +50,6 @@ public class CommentLikeService {
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tìm thấy"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

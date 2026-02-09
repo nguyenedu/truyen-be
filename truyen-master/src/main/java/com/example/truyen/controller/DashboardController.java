@@ -15,14 +15,12 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
-    /**
-     * Lấy thống kê hệ thống cho bảng điều khiển.
-     */
+    // Lấy thống kê hệ thống cho dashboard
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DashboardStatsResponse>> getDashboardStats(
             @RequestParam(defaultValue = "month") String period) {
-        return ResponseEntity.ok(ApiResponse.success("Lấy thống kê bảng điều khiển thành công",
+        return ResponseEntity.ok(ApiResponse.success("Get dashboard stats successfully",
                 dashboardService.getDashboardStats(period)));
     }
 }

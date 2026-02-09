@@ -34,9 +34,7 @@ public class TrendingController {
     private final FavoriteRepository favoriteRepository;
     private final CommentRepository commentRepository;
 
-    /**
-     * Lấy danh sách truyện thịnh hành theo loại (NGÀY, TUẦN, THÁNG).
-     */
+    // Lấy danh sách truyện thịnh hành (theo ngày, tuần, tháng)
     @GetMapping
     public ResponseEntity<List<StoryTrendingDTO>> getTrending(
             @RequestParam(value = "t", required = false) String tParam,
@@ -44,7 +42,7 @@ public class TrendingController {
             @RequestParam(defaultValue = "20") int limit) {
 
         try {
-            String typeString = tParam != null ? tParam : typeParam;
+            var typeString = tParam != null ? tParam : typeParam;
 
             if (typeString == null || typeString.isEmpty()) {
                 typeString = "DAILY";
@@ -70,9 +68,7 @@ public class TrendingController {
         }
     }
 
-    /**
-     * Theo dõi lượt xem truyện của người dùng.
-     */
+    // Ghi nhận lượt xem (cách đơn giản qua GET/POST params)
     @PostMapping("/stories/{id}/view")
     public ResponseEntity<String> trackViewSimple(
             @PathVariable Long id,
@@ -81,16 +77,14 @@ public class TrendingController {
 
         try {
             viewService.trackView(id, userId, request.getRemoteAddr());
-            return ResponseEntity.ok("Đã ghi nhận lượt xem");
+            return ResponseEntity.ok("View tracked");
         } catch (Exception e) {
             log.error("Failed to track view for story: {}", id, e);
-            return ResponseEntity.ok("Ghi nhận thất bại");
+            return ResponseEntity.ok("Tracking failed");
         }
     }
 
-    /**
-     * Theo dõi lượt xem truyện qua request body.
-     */
+    // Ghi nhận lượt xem (qua Body)
     @PostMapping("/track")
     public ResponseEntity<String> trackView(
             @Valid @RequestBody TrackViewRequest requestDto,
@@ -105,33 +99,28 @@ public class TrendingController {
         }
     }
 
-    /**
-     * Làm mới thủ công bộ nhớ đệm thịnh hành cho một loại cụ thể.
-     */
+    // Kích hoạt làm mới bảng xếp hạng thủ công (Admin)
     @PostMapping("/refresh")
     public ResponseEntity<String> manualRefresh(
             @RequestParam(defaultValue = "DAILY") Ranking.RankingType type) {
 
         try {
             trendingService.manualRefresh(type);
-            return ResponseEntity.ok("Đã làm mới thịnh hành: " + type);
+            return ResponseEntity.ok("Trending refreshed: " + type);
         } catch (Exception e) {
             log.error("Failed to refresh trending: {}", type, e);
-            return ResponseEntity.status(500).body("Làm mới thất bại: " + e.getMessage());
+            return ResponseEntity.status(500).body("Refresh failed: " + e.getMessage());
         }
     }
 
-    /**
-     * Lấy thống kê chi tiết cho một truyện cụ thể.
-     */
     @GetMapping("/stats/{storyId}")
     public ResponseEntity<?> getStoryStats(@PathVariable Long storyId) {
 
         try {
-            Story story = storyRepository.findById(storyId)
+            var story = storyRepository.findById(storyId)
                     .orElseThrow(() -> new RuntimeException("Story not found"));
 
-            StoryStatsResponse stats = StoryStatsResponse.builder()
+            var stats = StoryStatsResponse.builder()
                     .storyId(storyId)
                     .title(story.getTitle())
                     .image(story.getImage())

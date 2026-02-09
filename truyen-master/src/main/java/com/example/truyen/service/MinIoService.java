@@ -1,6 +1,5 @@
 package com.example.truyen.service;
 
-
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.errors.MinioException;
@@ -24,7 +23,7 @@ public class MinIoService {
     private String minioUrl;
 
     public String uploadFile(MultipartFile file, String folder) {
-        try{
+        try {
             String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
             String objectName = folder + "/" + fileName;
 
@@ -34,13 +33,12 @@ public class MinIoService {
                             .object(objectName)
                             .stream(file.getInputStream(), file.getSize(), -1)
                             .contentType(file.getContentType())
-                            .build()
-            );
+                            .build());
 
-            return minioUrl + "/" +  bucket + "/" + objectName;
+            return minioUrl + "/" + bucket + "/" + objectName;
 
-        }catch (Exception e){
-            throw new RuntimeException("Upload file thất bại", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Upload file failed", e);
         }
     }
 }
