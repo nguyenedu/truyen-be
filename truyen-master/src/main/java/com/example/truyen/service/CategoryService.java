@@ -81,9 +81,7 @@ public class CategoryService {
         categoryRepository.delete(category);
     }
 
-    /**
-     * Convert Category to CategoryResponse DTO.
-     */
+    // Chuyển đổi từ Category entity sang CategoryResponse DTO
     private CategoryResponse convertToResponse(Category category) {
         return CategoryResponse.builder()
                 .id(category.getId())

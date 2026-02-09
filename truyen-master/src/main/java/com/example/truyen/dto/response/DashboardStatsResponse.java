@@ -13,30 +13,23 @@ import java.util.List;
 @Builder
 public class DashboardStatsResponse {
 
-
     private Long totalStories;
     private Long totalAuthors;
     private Long totalUsers;
     private Long totalViews;
-
 
     private StatsComparison storiesComparison;
     private StatsComparison authorsComparison;
     private StatsComparison usersComparison;
     private StatsComparison viewsComparison;
 
-
     private List<TopStoryDTO> topStoriesByViews;
-
 
     private List<TopAuthorDTO> topAuthorsByStories;
 
-
     private List<ChartDataPoint> newStoriesChart;
 
-
     private List<ChartDataPoint> newUsersChart;
-
 
     private List<RecentActivityDTO> recentActivities;
 
@@ -80,7 +73,7 @@ public class DashboardStatsResponse {
     @AllArgsConstructor
     @Builder
     public static class ChartDataPoint {
-        private String date; // yyyy-MM-dd hoặc label như "T2", "T3"
+        private String date;
         private Long count;
     }
 
@@ -91,7 +84,7 @@ public class DashboardStatsResponse {
     public static class RecentActivityDTO {
         private Long id;
         private String username;
-        private String action; // CREATE, UPDATE, DELETE
+        private String action;
         private String tableName;
         private String target;
         private String timeAgo;

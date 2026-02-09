@@ -32,7 +32,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt)) {
-                // CHECK BLACKLIST FIRST
                 if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
                     logger.warn("Token is in blacklist");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -40,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                // Validate token
+                // Xác thực token
                 if (jwtTokenProvider.validateToken(jwt)) {
                     String username = jwtTokenProvider.getUsernameFromToken(jwt);
 

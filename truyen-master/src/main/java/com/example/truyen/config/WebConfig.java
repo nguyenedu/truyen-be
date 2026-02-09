@@ -12,9 +12,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "http://localhost:5173",
-                        "http://localhost:5174", // Admin FE
-                        "http://localhost:5175",
-                        "http://localhost:5176"// User FE
+                        "http://localhost:5174", // Frontend Admin
+                        "http://localhost:5175", // :)))
+                        "http://localhost:5176" // Frontend User
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

@@ -15,9 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Consumer xử lý Activity Log Events từ Kafka
- */
+// Consumer xử lý Activity Log Events từ Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -25,9 +23,7 @@ public class ActivityLogConsumer {
 
     private final ActivityLogRepository activityLogRepository;
 
-    /**
-     * Xử lý activity log events với batch processing
-     */
+    // Xử lý activity log events với batch processing
     @KafkaListener(topics = KafkaTopicConfig.ACTIVITY_LOGS, groupId = "activity-log-group", containerFactory = "kafkaListenerContainerFactory", batch = "true")
     @Transactional
     public void consumeActivityLogs(
@@ -40,22 +36,20 @@ public class ActivityLogConsumer {
             List<ActivityLog> activityLogs = new ArrayList<>();
 
             for (ActivityLogEvent event : events) {
-                // Map ActivityLogEvent -> ActivityLog entity
-                // ActivityLog fields: userId, action, tableName, recordId, description,
-                // ipAddress, createdAt
+                // Ánh xạ ActivityLogEvent -> ActivityLog entity
+                // Các trường ActivityLog: userId, action, tableName, recordId, description, ipAddress, createdAt
                 ActivityLog activityLog = ActivityLog.builder()
                         .userId(event.getUserId())
                         .action(event.getAction())
-                        .tableName(event.getEntityType()) // entityType -> tableName
-                        .recordId(event.getEntityId()) // entityId -> recordId
+                        .tableName(event.getEntityType())
+                        .recordId(event.getEntityId())
                         .description(buildDescription(event))
-                        .ipAddress(null) // IP address không có trong event, có thể thêm sau
+                        .ipAddress(null)
                         .build();
 
                 activityLogs.add(activityLog);
             }
-
-            // Batch insert vào database
+            // Lưu tất cả activity logs vào cơ sở dữ liệu
             activityLogRepository.saveAll(activityLogs);
 
             if (acknowledgment != null) {
@@ -69,9 +63,7 @@ public class ActivityLogConsumer {
         }
     }
 
-    /**
-     * Build description từ event details
-     */
+    // Tạo mô tả từ chi tiết sự kiện
     private String buildDescription(ActivityLogEvent event) {
         StringBuilder desc = new StringBuilder();
         if (event.getUsername() != null) {

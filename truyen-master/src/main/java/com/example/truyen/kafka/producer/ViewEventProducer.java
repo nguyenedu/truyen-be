@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Producer gửi View Events vào Kafka
- */
+// Producer gửi View Events vào Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -20,21 +18,16 @@ public class ViewEventProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    /**
-     * Gửi view event vào Kafka topic
-     * 
-     * @param viewEvent Event cần gửi
-     */
+    // Gửi view event vào Kafka topic
     public void sendViewEvent(ViewEvent viewEvent) {
         try {
-            // Sử dụng storyId làm key để đảm bảo các events của cùng 1 story vào cùng
-            // partition
+            // Sử dụng storyId làm key để đảm bảo các events của cùng 1 story vào cùng partition
             String key = String.valueOf(viewEvent.getStoryId());
 
             CompletableFuture<SendResult<String, Object>> future = kafkaTemplate
                     .send(KafkaTopicConfig.STORY_VIEW_EVENTS, key, viewEvent);
 
-            // Callback xử lý success/failure
+            // Callback xử lý thành công/thất bại
             future.whenComplete((result, ex) -> {
                 if (ex == null) {
                     log.debug("View event sent successfully for story ID: {} to partition: {}",

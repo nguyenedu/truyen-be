@@ -15,9 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Consumer xử lý Search Analytics Events từ Kafka
- */
+// Consumer xử lý Search Analytics Events từ Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -25,9 +23,7 @@ public class SearchAnalyticsConsumer {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    /**
-     * Xử lý search events với batch processing
-     */
+    // Xử lý search event
     @KafkaListener(topics = KafkaTopicConfig.SEARCH_QUERIES, groupId = "search-analytics-group", containerFactory = "kafkaListenerContainerFactory", batch = "true")
     public void consumeSearchEvents(
             @Payload List<SearchEvent> events,
@@ -43,17 +39,17 @@ public class SearchAnalyticsConsumer {
                     continue;
                 }
 
-                // 1. Update popular searches (all time)
+                // 1. Cập nhật tìm kiếm phổ biến (toàn thời gian)
                 redisTemplate.opsForZSet()
                         .incrementScore(RedisKeyConstants.SEARCH_POPULAR, query, 1.0);
 
-                // 2. Update trending searches (daily)
+                // 2. Cập nhật tìm kiếm xu hướng (hàng ngày)
                 String trendingKey = RedisKeyConstants.SEARCH_TRENDING + LocalDate.now();
                 redisTemplate.opsForZSet()
                         .incrementScore(trendingKey, query, 1.0);
                 redisTemplate.expire(trendingKey, 7, TimeUnit.DAYS);
 
-                // 3. Update user search history (if user is logged in)
+                // 3. Cập nhật lịch sử tìm kiếm người dùng
                 if (event.getUserId() != null) {
                     String userKey = RedisKeyConstants.SEARCH_USER_HISTORY + event.getUserId();
                     double timestamp = System.currentTimeMillis() / 1000.0;
@@ -61,14 +57,14 @@ public class SearchAnalyticsConsumer {
                             .add(userKey, query, timestamp);
                     redisTemplate.expire(userKey, 90, TimeUnit.DAYS);
 
-                    // Giữ tối đa 50 searches gần nhất
+                    // Giữ tối đa 50 tìm kiếm gần nhất
                     Long size = redisTemplate.opsForZSet().size(userKey);
                     if (size != null && size > 50) {
                         redisTemplate.opsForZSet().removeRange(userKey, 0, size - 51);
                     }
                 }
 
-                // 4. Track click-through rate (nếu có click)
+                // 4. Theo dõi tỷ lệ nhấp (nếu có click)
                 if (event.getClickedStoryId() != null) {
                     String ctrKey = "search:ctr:" + query;
                     redisTemplate.opsForValue().increment(ctrKey);
@@ -87,9 +83,7 @@ public class SearchAnalyticsConsumer {
         }
     }
 
-    /**
-     * Normalize query: lowercase, trim, remove extra spaces
-     */
+    // Chuẩn hóa truy vấn: chữ thường, cắt khoảng trắng thừa
     private String normalizeQuery(String query) {
         if (query == null) {
             return null;

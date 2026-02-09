@@ -34,7 +34,7 @@ public class StoryService {
     private final SearchProducer searchProducer;
     private final RatingRepository ratingRepository;
 
-    // Lấy danh sách truyện (có phân trang)
+    // Lấy danh sách truyện
     @Transactional(readOnly = true)
     public Page<StoryResponse> getAllStories(int page, int size) {
         return storyRepository.findAll(PageRequest.of(page, size)).map(this::convertToResponse);
@@ -238,7 +238,7 @@ public class StoryService {
                 .map(Category::getName)
                 .collect(Collectors.toSet());
 
-        // Fetch rating data
+        // Lấy đánh giá trung bình và tổng số đánh giá
         var averageRating = ratingRepository.getAverageRating(story.getId());
         var totalRatingsCount = ratingRepository.countByStoryId(story.getId());
 

@@ -28,7 +28,7 @@ public class CommentService {
     private final ChapterRepository chapterRepository;
     private final CommentLikeRepository commentLikeRepository;
 
-    // Lấy danh sách bình luận truyện (phân trang, mới nhất trước)
+    // Lấy danh sách bình luận truyện
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByStoryId(Long storyId, int page, int size) {
         storyRepository.findById(storyId)
@@ -38,7 +38,7 @@ public class CommentService {
                 .map(this::convertToResponse);
     }
 
-    // Lấy danh sách bình luận chương (phân trang)
+    // Lấy danh sách bình luận chương
     @Transactional(readOnly = true)
     public Page<CommentResponse> getCommentsByChapterId(Long chapterId, int page, int size) {
         chapterRepository.findById(chapterId)
@@ -48,7 +48,7 @@ public class CommentService {
                 .map(this::convertToResponse);
     }
 
-    // Tạo bình luận mới (gắn với truyện hoặc chương)
+    // Tạo bình luận mới
     @Transactional
     public CommentResponse createComment(CommentRequest request) {
         User currentUser = getCurrentUser();
@@ -84,7 +84,7 @@ public class CommentService {
         return convertToResponse(commentRepository.save(comment));
     }
 
-    // Cập nhật nội dung bình luận (kiểm tra quyền sở hữu)
+    // Cập nhật nội dung bình luận
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentRequest request) {
         User currentUser = getCurrentUser();
@@ -99,7 +99,7 @@ public class CommentService {
         return convertToResponse(commentRepository.save(comment));
     }
 
-    // Xóa bình luận (kiểm tra quyền sở hữu hoặc Admin)
+    // Xóa bình luận
     @Transactional
     public void deleteComment(Long commentId) {
         log.debug("Attempting to delete comment with ID: {}", commentId);
@@ -118,8 +118,8 @@ public class CommentService {
             throw new BadRequestException("You do not have permission to delete this comment");
         }
 
-        // Delete all likes related to this comment before deleting comment to avoid FK
-        // error
+        // Xóa tất cả lượt thích liên quan đến bình luận này trước khi xóa bình luận để tránh lỗi khoá ngoại
+
         commentLikeRepository.deleteByCommentId(commentId);
         log.debug("Deleted likes for comment {}", commentId);
 
@@ -139,18 +139,14 @@ public class CommentService {
         return commentRepository.countByChapterId(chapterId);
     }
 
-    /**
-     * Get current logged-in user from SecurityContext.
-     */
+    // Lấy thông tin người dùng hiện tại từ Security Context
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    /**
-     * Convert Comment to CommentResponse DTO.
-     */
+    // Chuyển đổi Comment entity thành CommentResponse DTO
     private CommentResponse convertToResponse(Comment comment) {
         boolean isLiked = false;
         try {

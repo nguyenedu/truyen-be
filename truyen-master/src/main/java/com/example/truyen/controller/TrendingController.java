@@ -34,7 +34,7 @@ public class TrendingController {
     private final FavoriteRepository favoriteRepository;
     private final CommentRepository commentRepository;
 
-    // Lấy danh sách truyện thịnh hành (theo ngày, tuần, tháng)
+    // Lấy danh sách truyện thịnh hành theo ngày, tuần, tháng
     @GetMapping
     public ResponseEntity<List<StoryTrendingDTO>> getTrending(
             @RequestParam(value = "t", required = false) String tParam,
@@ -68,7 +68,7 @@ public class TrendingController {
         }
     }
 
-    // Ghi nhận lượt xem (cách đơn giản qua GET/POST params)
+    // Ghi nhận lượt xem
     @PostMapping("/stories/{id}/view")
     public ResponseEntity<String> trackViewSimple(
             @PathVariable Long id,
@@ -84,7 +84,7 @@ public class TrendingController {
         }
     }
 
-    // Ghi nhận lượt xem (qua Body)
+    // Ghi nhận lượt xem với DTO
     @PostMapping("/track")
     public ResponseEntity<String> trackView(
             @Valid @RequestBody TrackViewRequest requestDto,
@@ -99,7 +99,7 @@ public class TrendingController {
         }
     }
 
-    // Kích hoạt làm mới bảng xếp hạng thủ công (Admin)
+    // Kích hoạt làm mới bảng xếp hạng thủ công
     @PostMapping("/refresh")
     public ResponseEntity<String> manualRefresh(
             @RequestParam(defaultValue = "DAILY") Ranking.RankingType type) {

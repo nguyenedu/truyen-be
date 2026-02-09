@@ -15,18 +15,14 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Cấu hình Kafka Producer và Consumer
- */
+// Cấu hình Kafka Producer và Consumer
 @Configuration
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    /**
-     * Cấu hình Producer Factory với JSON serialization
-     */
+    // Cấu hình Producer Factory với JSON serialization
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> config = new HashMap<>();
@@ -39,30 +35,26 @@ public class KafkaConfig {
         config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 
         // Performance & Reliability
-        config.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy"); // Nén dữ liệu
-        config.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384); // Batch size 16KB
-        config.put(ProducerConfig.LINGER_MS_CONFIG, 10); // Đợi 10ms để batch
-        config.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432); // 32MB buffer
+        config.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
+        config.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+        config.put(ProducerConfig.LINGER_MS_CONFIG, 10);
+        config.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
 
-        // Idempotence - đảm bảo không gửi trùng
+        // Đảm bảo không gửi trùng
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        config.put(ProducerConfig.ACKS_CONFIG, "all"); // Đợi tất cả replicas acknowledge
-        config.put(ProducerConfig.RETRIES_CONFIG, 3); // Retry 3 lần nếu fail
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.RETRIES_CONFIG, 3);
 
         return new DefaultKafkaProducerFactory<>(config);
     }
 
-    /**
-     * Kafka Template để gửi messages
-     */
+    // Kafka Template để gửi messages
     @Bean
     public KafkaTemplate<String, Object> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 
-    /**
-     * Cấu hình Consumer Factory với JSON deserialization
-     */
+    // Cấu hình Consumer Factory với JSON deserialization
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> config = new HashMap<>();
@@ -80,16 +72,14 @@ public class KafkaConfig {
         config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.example.truyen.dto.event.ViewEvent");
 
         // Consumer settings
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"); // Đọc từ đầu nếu chưa có offset
-        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // Manual commit để đảm bảo xử lý thành công
-        config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100); // Lấy tối đa 100 records mỗi lần poll
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
-    /**
-     * Container Factory cho Kafka Listener
-     */
+    // Container Factory cho Kafka Listener
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();

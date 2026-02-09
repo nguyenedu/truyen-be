@@ -1,6 +1,6 @@
 package com.example.truyen.config;
 
-// This class is created when the web is newly created, so there is no SuperAdmin to manage it
+// Tạo tài khoản Super Admin mặc định nếu chưa có
 
 import com.example.truyen.entity.User;
 import com.example.truyen.repository.UserRepository;

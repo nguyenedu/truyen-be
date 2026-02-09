@@ -77,18 +77,14 @@ public class FavoriteService {
         return favoriteRepository.countByStoryId(storyId);
     }
 
-    /**
-     * Get current logged-in user from SecurityContext.
-     */
+    // Lấy người dùng hiện tại từ Security Context
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    /**
-     * Convert Favorite to FavoriteResponse DTO.
-     */
+    // Chuyển đổi Favorite entity sang FavoriteResponse DTO
     private FavoriteResponse convertToResponse(Favorite favorite) {
         Story story = favorite.getStory();
         return FavoriteResponse.builder()

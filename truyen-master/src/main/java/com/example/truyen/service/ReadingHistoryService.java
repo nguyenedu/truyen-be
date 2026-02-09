@@ -27,7 +27,7 @@ public class ReadingHistoryService {
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
 
-    // Lấy danh sách lịch sử đọc (phân trang)
+    // Lấy danh sách lịch sử đọc
     @Transactional(readOnly = true)
     public Page<ReadingHistoryResponse> getMyReadingHistory(int page, int size) {
         User currentUser = getCurrentUser();
@@ -90,18 +90,14 @@ public class ReadingHistoryService {
         readingHistoryRepository.deleteAll(histories.getContent());
     }
 
-    /**
-     * Get current logged-in user from SecurityContext.
-     */
+    // Lấy thông tin người dùng hiện tại từ Security Context
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    /**
-     * Convert ReadingHistory to ReadingHistoryResponse DTO.
-     */
+    // Chuyển đổi entity ReadingHistory sang DTO ReadingHistoryResponse
     private ReadingHistoryResponse convertToResponse(ReadingHistory history) {
         return ReadingHistoryResponse.builder()
                 .id(history.getId())

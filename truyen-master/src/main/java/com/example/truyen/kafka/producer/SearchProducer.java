@@ -7,9 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Producer gửi search events vào Kafka
- */
+// Producer gửi search events vào Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -17,9 +15,7 @@ public class SearchProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    /**
-     * Gửi search event vào Kafka
-     */
+    // Gửi search event vào Kafka
     public void sendSearchEvent(SearchEvent event) {
         try {
             // Sử dụng query làm key để partition

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/favorites")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()") // All APIs require authentication
+@PreAuthorize("isAuthenticated()") // Tất cả các API yêu cầu xác thực
 public class FavoriteController {
 
     private final FavoriteService favoriteService;

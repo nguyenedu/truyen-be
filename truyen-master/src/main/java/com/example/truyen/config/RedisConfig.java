@@ -22,21 +22,21 @@ public class RedisConfig {
                 RedisTemplate<String, Object> template = new RedisTemplate<>();
                 template.setConnectionFactory(connectionFactory);
 
-                // Serializer for keys
+                // Serializer cho keys
                 StringRedisSerializer stringSerializer = new StringRedisSerializer();
                 template.setKeySerializer(stringSerializer);
                 template.setHashKeySerializer(stringSerializer);
 
-                // Custom ObjectMapper for better serialization
+                // ObjectMapper tùy chỉnh
                 ObjectMapper objectMapper = new ObjectMapper();
 
-                // Register JavaTimeModule for LocalDateTime support
+                // Đăng ký module JavaTime
                 objectMapper.registerModule(new JavaTimeModule());
 
-                // Disable writing dates as timestamps
+                // Tắt ghi ngày tháng dạng timestamp
                 objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-                // Enable default typing for polymorphic deserialization
+                // Bật default typing
                 BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
                                 .allowIfBaseType(Object.class)
                                 .build();
@@ -46,7 +46,7 @@ public class RedisConfig {
                                 ObjectMapper.DefaultTyping.NON_FINAL,
                                 JsonTypeInfo.As.PROPERTY);
 
-                // Serializer for values with custom ObjectMapper
+                // Serializer cho values
                 GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(
                                 objectMapper);
 

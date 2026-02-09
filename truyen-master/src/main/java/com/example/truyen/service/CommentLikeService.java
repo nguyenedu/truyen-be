@@ -23,7 +23,7 @@ public class CommentLikeService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
-    // Thực hiện thích hoặc bỏ thích bình luận (tự động cập nhật số lượt thích)
+    // Thích hoặc bỏ thích bình luận
     @Transactional
     public void toggleLike(Long commentId) {
         User currentUser = getCurrentUser();

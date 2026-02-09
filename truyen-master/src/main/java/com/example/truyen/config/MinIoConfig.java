@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import io.minio.MinioClient;
 
-
+// Cấu hình MinIO Client
 @Configuration
 public class MinIoConfig {
 

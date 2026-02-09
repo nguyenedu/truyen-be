@@ -22,7 +22,7 @@ public class ChapterService {
     private final ChapterRepository chapterRepository;
     private final StoryRepository storyRepository;
 
-    // Lấy danh sách chương của truyện (sắp xếp tăng dần theo số chương)
+    // Lấy danh sách chương của truyện
     @Transactional(readOnly = true)
     public List<ChapterResponse> getChaptersByStoryId(Long storyId) {
         storyRepository.findById(storyId)
@@ -107,9 +107,7 @@ public class ChapterService {
         return convertToResponse(chapterRepository.save(chapter));
     }
 
-    /**
-     * Delete chapter and update total chapters of the story.
-     */
+    // Xóa chương và cập nhật tổng số chương của truyện
     @Transactional
     public void deleteChapter(Long id) {
         Chapter chapter = chapterRepository.findById(id)
@@ -125,9 +123,7 @@ public class ChapterService {
         });
     }
 
-    /**
-     * Convert Chapter to ChapterResponse DTO.
-     */
+    // Chuyển đổi từ entity sang DTO response
     private ChapterResponse convertToResponse(Chapter chapter) {
         return ChapterResponse.builder()
                 .id(chapter.getId())

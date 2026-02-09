@@ -26,7 +26,7 @@ public class UserController {
     private final UserService userService;
     private final MinIoService minIoService;
 
-    // Lấy danh sách tất cả người dùng (Admin)
+    // Lấy danh sách tất cả người dùng (Admin, Super Admin)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
@@ -37,7 +37,7 @@ public class UserController {
                 .ok(ApiResponse.success("Get all users successfully", userService.getAllUsers(page, size)));
     }
 
-    // Lấy thông tin người dùng theo ID (Admin)
+    // Lấy thông tin người dùng theo ID (Admin, Super Admin)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
@@ -53,7 +53,7 @@ public class UserController {
                 .ok(ApiResponse.success("Get current user successfully", userService.getCurrentUser()));
     }
 
-    // Cập nhật thông tin người dùng (kèm avatar)
+    // Cập nhật thông tin người dùng với avater
     @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserWithAvatar(
@@ -79,7 +79,7 @@ public class UserController {
                 ApiResponse.success("Update user info successfully", userService.updateUser(id, request)));
     }
 
-    // Cập nhật thông tin người dùng (JSON)
+    // Cập nhật thông tin người dùng với dữ liệu JSON
     @PutMapping(value = "/{id}", consumes = { "application/json" })
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
@@ -106,7 +106,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(action + " user successfully", user));
     }
 
-    // Xóa người dùng (Admin)
+    // Xóa người dùng (Admin, Super Admin)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long id) {
@@ -114,7 +114,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Delete user successfully", null));
     }
 
-    // Đếm số lượng người dùng theo vai trò (Admin)
+    // Đếm số lượng người dùng theo vai trò (Admin, Super Admin)
     @GetMapping("/count-by-role/{role}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Long>> countUserByRole(@PathVariable String role) {
@@ -122,7 +122,7 @@ public class UserController {
                 .ok(ApiResponse.success("Count users successfully", userService.countUsersByRole(role)));
     }
 
-    // Tạo người dùng mới kèm avatar (Admin)
+    // Tạo người dùng mới kèm avatar (Admin, Super Admin)
     @PostMapping(consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<UserResponse> createUserWithAvatar(
@@ -148,14 +148,14 @@ public class UserController {
         return ApiResponse.success("Create user successfully", userService.createUser(request));
     }
 
-    // Tạo người dùng mới (JSON) (Admin)
+    // Tạo người dùng mới với dữ liệu JSON (Admin, Super Admin)
     @PostMapping(consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ApiResponse<UserResponse> createUser(@RequestBody CreateUserRequest request) {
         return ApiResponse.success("Create user successfully", userService.createUser(request));
     }
 
-    // Tìm kiếm người dùng (Admin)
+    // Tìm kiếm người dùng (Admin, Super Admin)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(

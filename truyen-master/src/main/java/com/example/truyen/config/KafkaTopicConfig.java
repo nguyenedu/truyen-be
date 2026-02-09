@@ -19,8 +19,8 @@ public class KafkaTopicConfig {
 
     /**
      * Topic cho view tracking events
-     * - Partitions: 3 để tăng throughput
-     * - Replication: 2 để đảm bảo high availability
+     * - Partitions: 3
+     * - Replication: 2
      */
     @Bean
     public NewTopic storyViewEventsTopic() {
@@ -46,7 +46,7 @@ public class KafkaTopicConfig {
 
     /**
      * Topic cho analytics events
-     * - Partitions: 3 để xử lý song song
+     * - Partitions: 3
      * - Replication: 2
      */
     @Bean
@@ -59,6 +59,8 @@ public class KafkaTopicConfig {
 
     /**
      * Topic cho search analytics
+     * - Partitions: 2
+     * - Replication: 2
      */
     @Bean
     public NewTopic searchQueriesTopic() {

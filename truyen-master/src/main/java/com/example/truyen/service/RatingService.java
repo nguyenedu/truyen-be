@@ -102,18 +102,14 @@ public class RatingService {
         return result;
     }
 
-    /**
-     * Get current logged-in user from SecurityContext.
-     */
+    // Lấy người dùng hiện tại từ Scecurity Context
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    /**
-     * Convert Rating to RatingResponse DTO.
-     */
+    // Chuyển đổi entity Rating sang DTO RatingResponse
     private RatingResponse convertToResponse(Rating rating) {
         return RatingResponse.builder()
                 .id(rating.getId())

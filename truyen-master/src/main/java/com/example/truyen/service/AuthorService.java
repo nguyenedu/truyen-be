@@ -20,7 +20,7 @@ public class AuthorService {
 
     private final AuthorRepository authorRepository;
 
-    // Lấy tất cả tác giả (có hỗ trợ tìm kiếm theo tên)
+    // Lấy tất cả tác giả
     @Transactional(readOnly = true)
     public List<AuthorResponse> getAllAuthors() {
         List<Author> authors = authorRepository.findAll();
@@ -87,9 +87,7 @@ public class AuthorService {
         authorRepository.delete(author);
     }
 
-    /**
-     * Search authors by name containing keyword.
-     */
+    // Tìm kiếm tác giả theo tên
     @Transactional(readOnly = true)
     public List<AuthorResponse> searchAuthors(String name) {
         List<Author> authors;
@@ -105,9 +103,7 @@ public class AuthorService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Convert Author to AuthorResponse DTO.
-     */
+    // Chuyển đổi Author entity sang AuthorResponse DTO
     private AuthorResponse convertToResponse(Author author) {
         return AuthorResponse.builder()
                 .id(author.getId())

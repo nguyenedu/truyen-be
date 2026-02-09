@@ -19,9 +19,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Consumer xử lý View Events từ Kafka
- */
+// Consumer xử lý View Events từ Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -30,10 +28,7 @@ public class ViewEventConsumer {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StoryRepository storyRepository;
 
-    /**
-     * Xử lý view events từ Kafka topic
-     * Sử dụng batch processing để tối ưu performance
-     */
+    // Xử lý view events từ Kafka topic
     @KafkaListener(topics = KafkaTopicConfig.STORY_VIEW_EVENTS, groupId = "view-tracking-group", containerFactory = "kafkaListenerContainerFactory", batch = "true")
     @Transactional
     public void consumeViewEvents(
@@ -48,7 +43,7 @@ public class ViewEventConsumer {
                 processViewEvent(event);
             }
 
-            // Manual commit sau khi xử lý thành công
+            // Commit thủ công sau khi xử lý thành công
             if (acknowledgment != null) {
                 acknowledgment.acknowledge();
             }
@@ -57,37 +52,34 @@ public class ViewEventConsumer {
 
         } catch (Exception e) {
             log.error("Error processing view events batch: {}", e.getMessage(), e);
-            // Không acknowledge để Kafka retry
         }
     }
 
-    /**
-     * Xử lý từng view event
-     */
+    // Xử lý từng view event
     private void processViewEvent(ViewEvent event) {
         try {
             String today = LocalDate.now().toString();
             Long storyId = event.getStoryId();
             Long userId = event.getUserId();
 
-            // 1. Tăng lượng views trong ngày
+            // 1. Tăng lượng xem trong ngày
             String viewKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
             Long currentViews = redisTemplate.opsForValue().increment(viewKey, 1);
             redisTemplate.expire(viewKey, Duration.ofDays(1));
 
-            // 2. Đếm số lượng user đã xem trong ngày (nếu có userId)
+            // 2. Đếm số lượng người dùng đã xem trong ngày (nếu có userId)
             if (userId != null) {
                 String viewerKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
                 redisTemplate.opsForSet().add(viewerKey, userId);
                 redisTemplate.expire(viewerKey, Duration.ofDays(1));
             }
 
-            // 3. Tăng lượt view theo ngày
+            // 3. Tăng lượt xem theo ngày
             String dateViewKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
             redisTemplate.opsForValue().increment(dateViewKey, 1);
             redisTemplate.expire(dateViewKey, Duration.ofDays(35));
 
-            // 4. Đồng bộ hóa với database sau mỗi 100 lượt xem (tối ưu hơn 10)
+            // 4. Đồng bộ hóa với database sau mỗi 100 lượt xem
             if (currentViews != null && currentViews % 100 == 0) {
                 storyRepository.incrementTotalViews(storyId, 100);
                 log.debug("Synced 100 views to database for story ID: {}", storyId);

@@ -24,7 +24,7 @@ public class AuthorController {
     private final AuthorService authorService;
     private final MinIoService minIoService;
 
-    // Lấy danh sách tác giả (có tìm kiếm)
+    // Lấy danh sách tác giả
     @GetMapping
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> getAllAuthors() {
         return ResponseEntity
@@ -38,7 +38,7 @@ public class AuthorController {
                 .ok(ApiResponse.success("Get author details successfully", authorService.getAuthorById(id)));
     }
 
-    // Tạo tác giả mới kèm avatar
+    // Tạo tác giả mới với avatar
     @PostMapping(consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> createAuthorWithAvatar(
@@ -56,7 +56,7 @@ public class AuthorController {
                 .body(ApiResponse.success("Create author successfully", authorService.createAuthor(request)));
     }
 
-    // Tạo tác giả mới (JSON)
+    // Tạo tác giả mới
     @PostMapping(consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> createAuthor(@Valid @RequestBody AuthorRequest request) {
@@ -64,7 +64,7 @@ public class AuthorController {
                 .body(ApiResponse.success("Create author successfully", authorService.createAuthor(request)));
     }
 
-    // Cập nhật tác giả kèm avatar
+    // Cập nhật tác giả với avatar
     @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> updateAuthorWithAvatar(
@@ -83,7 +83,7 @@ public class AuthorController {
                 .ok(ApiResponse.success("Update author successfully", authorService.updateAuthor(id, request)));
     }
 
-    // Cập nhật thông tin tác giả (JSON)
+    // Cập nhật thông tin tác giả
     @PutMapping(value = "/{id}", consumes = { "application/json" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthorResponse>> updateAuthor(
@@ -93,9 +93,7 @@ public class AuthorController {
                 .ok(ApiResponse.success("Update author successfully", authorService.updateAuthor(id, request)));
     }
 
-    /**
-     * Delete an author.
-     */
+    // Xóa tác giả
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteAuthor(@PathVariable Long id) {
@@ -103,9 +101,7 @@ public class AuthorController {
         return ResponseEntity.ok(ApiResponse.success("Delete author successfully", null));
     }
 
-    /**
-     * Search author by name.
-     */
+    // Tìm kiếm tác giả theo tên
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<AuthorResponse>>> searchAuthors(
             @RequestParam(required = false) String name) {

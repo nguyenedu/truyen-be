@@ -19,7 +19,7 @@ public class UploadFileController {
 
     private final MinIoService minIoService;
 
-    // API tải lên tệp (ảnh)
+    // API upload ảnh
     @PostMapping("/upload")
     public ResponseEntity<?> upload(
             @RequestParam MultipartFile file,

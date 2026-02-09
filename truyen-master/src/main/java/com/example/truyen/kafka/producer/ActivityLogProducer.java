@@ -7,9 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Producer gửi Activity Log Events vào Kafka
- */
+// Producer gửi Activity Log Events vào Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -17,9 +15,7 @@ public class ActivityLogProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    /**
-     * Gửi activity log event vào Kafka
-     */
+    // Gửi activity log event vào Kafka
     public void sendActivityLog(ActivityLogEvent event) {
         try {
             // Sử dụng userId làm key để các logs của cùng user vào cùng partition

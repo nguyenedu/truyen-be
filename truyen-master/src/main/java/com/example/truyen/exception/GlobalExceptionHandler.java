@@ -14,7 +14,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ResourceNotFoundException (404)
+    // Xử lý ResourceNotFoundException (404)
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         return ResponseEntity
@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
-    // BadRequestException (400)
+    // Xử lý BadRequestException (400)
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Object>> handleBadRequestException(BadRequestException ex) {
         return ResponseEntity
@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
-    // Validation (400)
+    // Xử lý lỗi Validate (400)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(false, "Dữ liệu không hợp lệ", errors));
     }
 
-    // (500)
+    // Xử lý các lỗi khác (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGlobalException(Exception ex) {
         return ResponseEntity

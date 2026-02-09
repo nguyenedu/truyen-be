@@ -38,49 +38,49 @@ public class LoggingAspect {
     public Object logServiceMethods(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
 
-        // Get method info
+        // Lấy thông tin phương thức
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         String className = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = method.getName();
         String fullMethodName = className + "." + methodName;
 
-        // Get parameters
+        // Lấy tham số
         Object[] args = joinPoint.getArgs();
         String parameters = activityLogService.convertObjectToJson(args);
 
-        // Get user info and IP
+        // Lấy thông tin người dùng và IP
         Long userId = getCurrentUserId();
         String ipAddress = getClientIpAddress();
 
-        // Log to console
+        // Ghi log ra console
         log.info(">>> {} - User: {} - IP: {} - Params: {}",
                 fullMethodName, userId, ipAddress, parameters);
 
         try {
-            // Execute method
+            // Thực thi phương thức
             Object result = joinPoint.proceed();
 
             long executionTime = System.currentTimeMillis() - startTime;
 
-            // Convert result
+            // Chuyển đổi kết quả
             String resultJson = activityLogService.convertObjectToJson(result);
 
-            // Log console
+            // Ghi log console
             log.info("<<< {} - Time: {}ms - Result: {}",
                     fullMethodName, executionTime,
                     resultJson != null && resultJson.length() > 200
                             ? resultJson.substring(0, 200) + "..."
                             : resultJson);
 
-            // Only save activity log if it is a significant action
+            // Chỉ lưu nhật ký hoạt động nếu là hành động quan trọng
             if (isSignificantAction(methodName, className)) {
                 String tableName = extractTableName(className);
                 Long recordId = extractRecordId(result, args);
                 String description = buildDescription(methodName, parameters, resultJson, executionTime);
                 String username = getCurrentUsername();
 
-                // Send activity log via Kafka
+                // Gửi nhật ký hoạt động qua Kafka
                 activityLogService.logActivity(
                         fullMethodName,
                         tableName,
@@ -96,17 +96,17 @@ public class LoggingAspect {
         } catch (Exception e) {
             long executionTime = System.currentTimeMillis() - startTime;
 
-            // Log error
+            // Ghi log lỗi
             log.error("!!! {} - Time: {}ms - Error: {}",
                     fullMethodName, executionTime, e.getMessage());
 
-            // Only save error log if it is a significant action
+            // Chỉ lưu nhật ký lỗi nếu là hành động quan trọng
             if (isSignificantAction(methodName, className)) {
                 String tableName = extractTableName(className);
                 String description = buildErrorDescription(methodName, parameters, e.getMessage(), executionTime);
                 String username = getCurrentUsername();
 
-                // Send error log via Kafka
+                // Gửi nhật ký lỗi qua Kafka
                 activityLogService.logActivity(
                         fullMethodName + " [ERROR]",
                         tableName,
@@ -121,15 +121,12 @@ public class LoggingAspect {
         }
     }
 
-    /**
-     * Checks if the method is a significant action that needs logging.
-     * Only log important changes: CREATE, UPDATE, DELETE, LOGIN, LOGOUT, REGISTER
-     */
+    // Kiểm tra xem phương thức có phải là hành động quan trọng cần ghi log không
     private boolean isSignificantAction(String methodName, String className) {
         String lowerMethodName = methodName.toLowerCase();
         String lowerClassName = className.toLowerCase();
 
-        // DO NOT log read-only operations
+        // Không ghi log các thao tác chỉ đọc
         if (lowerMethodName.startsWith("get") ||
                 lowerMethodName.startsWith("find") ||
                 lowerMethodName.startsWith("search") ||
@@ -142,14 +139,14 @@ public class LoggingAspect {
             return false;
         }
 
-        // DO NOT log token/blacklist operations
+        // Không ghi log các thao tác token/blacklist
         if (lowerMethodName.contains("blacklist") ||
                 lowerMethodName.contains("token") ||
                 lowerMethodName.contains("refresh")) {
             return false;
         }
 
-        // DO NOT log authentication checks (except login/logout/register)
+        // Không ghi log kiểm tra xác thực (ngoại trừ login/logout/register)
         if (lowerClassName.contains("auth") &&
                 !lowerMethodName.equals("login") &&
                 !lowerMethodName.equals("logout") &&
@@ -157,7 +154,7 @@ public class LoggingAspect {
             return false;
         }
 
-        // MUST log data modification operations
+        // Phải ghi log các thao tác sửa đổi dữ liệu
         if (lowerMethodName.startsWith("create") ||
                 lowerMethodName.startsWith("add") ||
                 lowerMethodName.startsWith("save") ||
@@ -174,7 +171,7 @@ public class LoggingAspect {
             return true;
         }
 
-        // Default: NO log
+        // Mặc định: Không ghi log
         return false;
     }
 
@@ -216,7 +213,6 @@ public class LoggingAspect {
                 return name != null ? name.toString() : null;
             }
         } catch (Exception e) {
-            // No getName() method
         }
         return null;
     }
@@ -228,8 +224,6 @@ public class LoggingAspect {
 
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
-
-                // Check X-Forwarded-For header (if proxy/load balancer)
                 String xForwardedFor = request.getHeader("X-Forwarded-For");
                 if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
                     return xForwardedFor.split(",")[0].trim();
@@ -249,8 +243,6 @@ public class LoggingAspect {
     }
 
     private String extractTableName(String className) {
-        // e.g.: StoryService -> stories
-        // UserService -> users
         if (className.endsWith("Service")) {
             String entityName = className.replace("Service", "");
             return entityName.toLowerCase() + "s";
@@ -260,7 +252,6 @@ public class LoggingAspect {
 
     private Long extractRecordId(Object result, Object[] args) {
         try {
-            // If result has getId() method
             if (result != null) {
                 Method getIdMethod = result.getClass().getMethod("getId");
                 Object id = getIdMethod.invoke(result);
@@ -270,15 +261,12 @@ public class LoggingAspect {
                     return ((Long) id).longValue();
                 }
             }
-
-            // Or take from first parameter if it is an ID
             if (args.length > 0 && args[0] instanceof Long) {
                 return ((Long) args[0]).longValue();
             } else if (args.length > 0 && args[0] instanceof Integer) {
                 return (Long) args[0];
             }
         } catch (Exception e) {
-            // Cannot extract ID
         }
         return null;
     }
@@ -297,7 +285,7 @@ public class LoggingAspect {
                 executionTime);
     }
 
-    // Describe error info
+    // Mô tả thông tin lỗi
     private String buildErrorDescription(String methodName, String parameters,
             String errorMessage, long executionTime) {
         return String.format(

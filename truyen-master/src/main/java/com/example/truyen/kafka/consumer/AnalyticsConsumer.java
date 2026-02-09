@@ -16,10 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * Consumer xử lý Analytics Events từ Kafka
- * Cập nhật trending scores và analytics data trong Redis
- */
+// Consumer xử lý Analytics Events từ Kafka. Cập nhật trending scores và analytics data trong Redis
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -29,9 +26,7 @@ public class AnalyticsConsumer {
 
     private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH");
 
-    /**
-     * Xử lý analytics events để cập nhật trending scores
-     */
+    // Xử lý analytics events
     @KafkaListener(topics = KafkaTopicConfig.ANALYTICS_EVENTS, groupId = "analytics-group", containerFactory = "kafkaListenerContainerFactory", batch = "true")
     public void consumeAnalyticsEvents(
             @Payload List<AnalyticsEvent> events,
@@ -55,9 +50,7 @@ public class AnalyticsConsumer {
         }
     }
 
-    /**
-     * Xử lý từng analytics event
-     */
+    // Xử lý từng analytics event
     private void processAnalyticsEvent(AnalyticsEvent event) {
         try {
             Long storyId = event.getStoryId();
@@ -67,15 +60,15 @@ public class AnalyticsConsumer {
             String eventType = event.getEventType();
             String hour = LocalDateTime.now().format(HOUR_FORMATTER);
 
-            // Tăng counter cho từng loại event theo giờ
+            // Tăng bộ đếm cho từng loại sự kiện theo giờ
             String hourlyKey = "analytics:hourly:" + hour + ":" + eventType + ":" + storyId;
             redisTemplate.opsForValue().increment(hourlyKey, 1);
             redisTemplate.expire(hourlyKey, Duration.ofDays(7));
 
-            // Cập nhật trending score (weighted scoring)
+            // Cập nhật điểm trending
             updateTrendingScore(storyId, eventType);
 
-            // Track category analytics nếu có
+            // Theo dõi analytics theo thể loại
             if (event.getCategoryId() != null) {
                 String categoryKey = "analytics:category:" + event.getCategoryId() + ":" + eventType;
                 redisTemplate.opsForValue().increment(categoryKey, 1);
@@ -87,10 +80,7 @@ public class AnalyticsConsumer {
         }
     }
 
-    /**
-     * Cập nhật trending score với weighted scoring
-     * VIEW: 1 điểm, FAVORITE: 5 điểm, RATING: 3 điểm, COMMENT: 4 điểm
-     */
+    // Cập nhật điểm trending. VIEW: 1, FAVORITE: 5, RATING: 3, COMMENT: 4
     private void updateTrendingScore(Long storyId, String eventType) {
         try {
             double score = switch (eventType) {
@@ -102,11 +92,11 @@ public class AnalyticsConsumer {
             };
 
             if (score > 0) {
-                // Cập nhật trending score trong Redis Sorted Set
+                // Cập nhật điểm trending trong Redis Sorted Set
                 String trendingKey = RedisKeyConstants.TRENDING_STORIES;
                 redisTemplate.opsForZSet().incrementScore(trendingKey, storyId, score);
 
-                // Set expiry cho trending data (7 ngày)
+                // Thiết lập thời gian hết hạn cho dữ liệu trending (7 ngày)
                 redisTemplate.expire(trendingKey, Duration.ofDays(7));
 
                 log.trace("Updated trending score for story {}: +{} points", storyId, score);

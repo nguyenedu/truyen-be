@@ -26,16 +26,16 @@ public class StoryViewService {
     private final ViewEventProducer viewEventProducer;
     private final AnalyticsProducer analyticsProducer;
 
-    // Gửi sự kiện xem tới Kafka để xử lý bất đồng bộ
+    // Gửi sự kiện xem tới Kafka để xử lý
     public void trackView(Long storyId, Long userId, String ipAddress) {
         try {
-            // Create session ID for deduplication
+            // Tạo session ID
             String sessionId = UUID.randomUUID().toString();
 
-            // Create view event
+            // Tạo sự kiện lượt xem
             ViewEvent viewEvent = ViewEvent.create(storyId, userId, ipAddress, sessionId);
 
-            // Send to Kafka (non-blocking, async)
+            // Send to Kafka
             viewEventProducer.sendViewEvent(viewEvent);
 
             log.debug("View event sent to Kafka for story ID: {} by user ID: {}", storyId, userId);

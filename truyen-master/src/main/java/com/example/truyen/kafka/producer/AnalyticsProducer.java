@@ -7,9 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * Producer gửi Analytics Events vào Kafka
- */
+// Producer gửi Analytics Events vào Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -17,9 +15,7 @@ public class AnalyticsProducer {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    /**
-     * Gửi analytics event vào Kafka
-     */
+    // Gửi analytics event vào Kafka
     public void sendAnalyticsEvent(AnalyticsEvent event) {
         try {
             // Sử dụng storyId làm key để analytics của cùng story vào cùng partition

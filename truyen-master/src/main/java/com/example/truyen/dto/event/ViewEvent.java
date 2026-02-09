@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * DTO cho View Event gửi qua Kafka
- */
+// DTO cho View Event gửi qua Kafka
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,9 +20,7 @@ public class ViewEvent {
     private String sessionId;
     private LocalDateTime timestamp;
 
-    /**
-     * Tạo ViewEvent từ request parameters
-     */
+    // Tạo ViewEvent từ request
     public static ViewEvent create(Long storyId, Long userId, String ipAddress, String sessionId) {
         return ViewEvent.builder()
                 .storyId(storyId)

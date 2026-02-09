@@ -29,7 +29,7 @@ public class DashboardService {
     private final AuthorRepository authorRepository;
     private final ActivityLogRepository activityLogRepository;
 
-    // Lấy toàn bộ thống kê dashboard (theo tuần/tháng)
+    // Lấy toàn bộ thống kê dashboard
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats(String period) {
         var stats = new DashboardStatsResponse();
@@ -44,33 +44,32 @@ public class DashboardService {
             previousPeriodStart = now.minusDays(14);
             previousPeriodEnd = now.minusDays(7);
         } else {
-            // Default: month
             currentPeriodStart = now.minusDays(30);
             previousPeriodStart = now.minusDays(60);
             previousPeriodEnd = now.minusDays(30);
         }
 
-        // Summary Statistics
+        // Tổng quan
         stats.setTotalStories(storyRepository.count());
         stats.setTotalAuthors(authorRepository.count());
         stats.setTotalUsers(userRepository.count());
         stats.setTotalViews(getTotalViews());
 
-        // Period Comparisons
+        // So sánh với kỳ trước
         stats.setStoriesComparison(compareStories(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setAuthorsComparison(compareAuthors(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setUsersComparison(compareUsers(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setViewsComparison(compareViews(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
 
-        // Top Performers
+        // Người dùng/Tác giả hàng đầu
         stats.setTopStoriesByViews(getTopStoriesByViews());
         stats.setTopAuthorsByStories(getTopAuthorsByStories());
 
-        // Charts
+        // Biểu đồ
         stats.setNewStoriesChart(getNewStoriesChart(period));
         stats.setNewUsersChart(getNewUsersChart(period));
 
-        // Recent Activity
+        // Hoạt động gần đây
         stats.setRecentActivities(getRecentActivities());
 
         return stats;

@@ -17,7 +17,7 @@ public class TokenBlacklistService {
 
     private static final String BLACKLIST_PREFIX = "blacklist:token:";
 
-    // Thêm token vào danh sách đen (với thời gian hết hạn)
+    // Thêm token vào danh sách đen
     public void blacklistToken(String token, long expirationTime) {
         String key = BLACKLIST_PREFIX + token;
 

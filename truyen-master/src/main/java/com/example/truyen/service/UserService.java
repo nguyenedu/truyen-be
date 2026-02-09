@@ -24,7 +24,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Lấy danh sách tất cả người dùng (phân trang)
+    // Lấy danh sách tất cả người dùng
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(int page, int size) {
         return userRepository.findAll(PageRequest.of(page, size)).map(this::convertToResponse);
