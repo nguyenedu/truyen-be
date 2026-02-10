@@ -11,7 +11,7 @@ public interface ActivityLogService {
 
         // Ghi lại hoạt động vào Kafka (có fallback save DB)
         void logActivity(String action, String entityType, Long entityId,
-                        String entityName, Long userId, String username, String details);
+                        String entityName, Long userId, String username, String details, String ipAddress);
 
         // Lấy nhật ký theo người dùng
         Page<ActivityLog> getLogsByUser(Long userId, Pageable pageable);

@@ -26,10 +26,10 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     // Ghi lại hoạt động vào Kafka
     @Override
     public void logActivity(String action, String entityType, Long entityId,
-            String entityName, Long userId, String username, String details) {
+            String entityName, Long userId, String username, String details, String ipAddress) {
 
         ActivityLogEvent event = ActivityLogEvent.create(
-                action, entityType, entityId, entityName, userId, username, details);
+                action, entityType, entityId, entityName, userId, username, details, ipAddress);
 
         try {
             activityLogProducer.sendActivityLog(event);
@@ -48,7 +48,7 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                     .tableName(event.getEntityType())
                     .recordId(event.getEntityId())
                     .description(buildDescription(event))
-                    .ipAddress(null)
+                    .ipAddress(event.getIpAddress())
                     .build();
 
             activityLogRepository.save(activityLog);

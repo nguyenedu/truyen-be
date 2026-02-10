@@ -37,14 +37,15 @@ public class ActivityLogConsumer {
 
             for (ActivityLogEvent event : events) {
                 // Ánh xạ ActivityLogEvent -> ActivityLog entity
-                // Các trường ActivityLog: userId, action, tableName, recordId, description, ipAddress, createdAt
+                // Các trường ActivityLog: userId, action, tableName, recordId, description,
+                // ipAddress, createdAt
                 ActivityLog activityLog = ActivityLog.builder()
                         .userId(event.getUserId())
                         .action(event.getAction())
                         .tableName(event.getEntityType())
                         .recordId(event.getEntityId())
                         .description(buildDescription(event))
-                        .ipAddress(null)
+                        .ipAddress(event.getIpAddress())
                         .build();
 
                 activityLogs.add(activityLog);

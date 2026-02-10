@@ -86,7 +86,8 @@ public class LoggingAspect {
                         extractEntityName(result),
                         userId,
                         username,
-                        description);
+                        description,
+                        ipAddress);
             }
 
             return result;
@@ -112,7 +113,8 @@ public class LoggingAspect {
                         null,
                         userId,
                         username,
-                        description);
+                        description,
+                        ipAddress);
             }
 
             throw e;
@@ -241,8 +243,13 @@ public class LoggingAspect {
     }
 
     private String extractTableName(String className) {
-        if (className.endsWith("Service")) {
-            String entityName = className.replace("Service", "");
+        String simplifiedName = className;
+        if (simplifiedName.endsWith("Impl")) {
+            simplifiedName = simplifiedName.substring(0, simplifiedName.length() - 4);
+        }
+
+        if (simplifiedName.endsWith("Service")) {
+            String entityName = simplifiedName.replace("Service", "");
             return entityName.toLowerCase() + "s";
         }
         return null;
