@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ActivityLogService {
+public class ActivityLogService implements com.example.truyen.service.impl.ActivityLogServiceImpl {
 
     private final ActivityLogRepository activityLogRepository;
     private final ActivityLogProducer activityLogProducer;
@@ -26,8 +26,9 @@ public class ActivityLogService {
 
     // Ghi lại hoạt động vào Kafka
     // Ghi lại hoạt động vào Kafka (có fallback save DB)
+    @Override
     public void logActivity(String action, String entityType, Long entityId,
-            String entityName, Long userId, String username, String details) {
+                            String entityName, Long userId, String username, String details) {
 
         ActivityLogEvent event = ActivityLogEvent.create(
                 action, entityType, entityId, entityName, userId, username, details);
@@ -50,7 +51,7 @@ public class ActivityLogService {
                     .tableName(event.getEntityType())
                     .recordId(event.getEntityId())
                     .description(buildDescription(event))
-                    .ipAddress(null) // Context IP might be lost here, can be improved if needed
+                    .ipAddress(null)
                     .build();
 
             activityLogRepository.save(activityLog);
@@ -76,6 +77,7 @@ public class ActivityLogService {
     }
 
     // Chuyển đổi đối tượng sang chuỗi JSON
+    @Override
     public String convertObjectToJson(Object obj) {
         if (obj == null) {
             return null;
@@ -91,40 +93,46 @@ public class ActivityLogService {
 
     // Lấy nhật ký theo người dùng
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> getLogsByUser(Long userId, Pageable pageable) {
         return activityLogRepository.findByUserId(userId, pageable);
     }
 
     // Lấy nhật ký theo hành động
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> getLogsByAction(String action, Pageable pageable) {
         return activityLogRepository.findByAction(action, pageable);
     }
 
     // Lấy nhật ký theo bảng
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> getLogsByTable(String tableName, Pageable pageable) {
         return activityLogRepository.findByTableName(tableName, pageable);
     }
 
     // Lấy nhật ký theo khoảng thời gian
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> getLogsByDateRange(LocalDateTime start, LocalDateTime end,
-            Pageable pageable) {
+                                                Pageable pageable) {
         return activityLogRepository.findByCreatedAtBetween(start, end, pageable);
     }
 
     // Tìm kiếm nhật ký nâng cao
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> searchLogs(Long userId, String action, String tableName,
-            LocalDateTime startDate, LocalDateTime endDate,
-            Pageable pageable) {
+                                        LocalDateTime startDate, LocalDateTime endDate,
+                                        Pageable pageable) {
         return activityLogRepository.searchLogs(userId, action, tableName,
                 startDate, endDate, pageable);
     }
 
     // Lấy tất cả nhật ký
     @Transactional(readOnly = true)
+    @Override
     public Page<ActivityLog> getAllLogs(Pageable pageable) {
         return activityLogRepository.findAll(pageable);
     }
