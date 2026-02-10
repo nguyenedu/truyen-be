@@ -50,7 +50,8 @@ public class AuthServiceImpl implements AuthService {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole().name());
+                user.getRole().name(),
+                user.getAvatar());
     }
 
     // Đăng ký tài khoản mới với vai trò mặc định
