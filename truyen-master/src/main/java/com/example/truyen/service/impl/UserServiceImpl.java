@@ -2,7 +2,6 @@ package com.example.truyen.service.impl;
 
 import com.example.truyen.dto.request.ChangeRoleRequest;
 import com.example.truyen.service.MinIoService;
-import org.springframework.web.multipart.MultipartFile;
 import com.example.truyen.dto.request.CreateUserRequest;
 import com.example.truyen.dto.request.UpdateUserRequest;
 import com.example.truyen.dto.response.UserResponse;
@@ -76,8 +75,9 @@ public class UserServiceImpl implements UserService {
             user.setEmail(request.getEmail());
         }
 
-        if (request.getAvatar() != null) {
-            user.setAvatar(request.getAvatar());
+        if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
+            String avatarUrl = minIoService.uploadFile(request.getAvatar(), "avatars");
+            user.setAvatar(avatarUrl);
         }
 
         if (request.getPhone() != null) {
@@ -213,6 +213,11 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Email already exists");
         }
 
+        String avatarUrl = null;
+        if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
+            avatarUrl = minIoService.uploadFile(request.getAvatar(), "avatars");
+        }
+
         var user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -221,6 +226,7 @@ public class UserServiceImpl implements UserService {
                 .phone(request.getPhone())
                 .role(User.Role.USER)
                 .isActive(true)
+                .avatar(avatarUrl)
                 .build();
         return convertToResponse(userRepository.save(user));
     }
@@ -259,23 +265,4 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    @Override
-    @Transactional
-    public UserResponse updateUser(Long id, UpdateUserRequest request, MultipartFile avatar) {
-        if (avatar != null && !avatar.isEmpty()) {
-            String avatarUrl = minIoService.uploadFile(avatar, "avatars");
-            request.setAvatar(avatarUrl);
-        }
-        return updateUser(id, request);
-    }
-
-    @Override
-    @Transactional
-    public UserResponse createUser(CreateUserRequest request, MultipartFile avatar) {
-        if (avatar != null && !avatar.isEmpty()) {
-            String avatarUrl = minIoService.uploadFile(avatar, "avatars");
-            request.setAvatar(avatarUrl);
-        }
-        return createUser(request);
-    }
 }

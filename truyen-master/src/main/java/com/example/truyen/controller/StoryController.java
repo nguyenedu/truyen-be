@@ -1,5 +1,6 @@
 package com.example.truyen.controller;
 
+import com.example.truyen.dto.request.StoryFilterCriteria;
 import com.example.truyen.dto.request.StoryRequest;
 import com.example.truyen.dto.response.ApiResponse;
 import com.example.truyen.dto.response.StoryResponse;
@@ -8,18 +9,13 @@ import com.example.truyen.service.StoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
-
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/stories")
@@ -87,33 +83,7 @@ public class StoryController {
         // Tạo truyện mới kèm ảnh bìa
         @PostMapping(consumes = { "multipart/form-data" })
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-        public ResponseEntity<ApiResponse<StoryResponse>> createStoryWithImage(
-                        @RequestParam String title,
-                        @RequestParam Long authorId,
-                        @RequestParam(required = false) String description,
-                        @RequestParam(required = false) String status,
-                        @RequestParam(required = false) MultipartFile coverImage,
-                        @RequestParam(required = false) String categoryIds) {
-
-                String imageUrl = (coverImage != null && !coverImage.isEmpty())
-                                ? minIoService.uploadFile(coverImage, "story-covers")
-                                : null;
-
-                var request = new StoryRequest();
-                request.setTitle(title);
-                request.setAuthorId(authorId);
-                request.setDescription(description);
-                request.setImage(imageUrl);
-                request.setStatus(status);
-
-                if (categoryIds != null && !categoryIds.isEmpty()) {
-                        var categoryIdSet = Arrays.stream(categoryIds.split(","))
-                                        .map(String::trim)
-                                        .map(Long::parseLong)
-                                        .collect(Collectors.toSet());
-                        request.setCategoryIds(categoryIdSet);
-                }
-
+        public ResponseEntity<ApiResponse<StoryResponse>> createStoryWithImage(@ModelAttribute StoryRequest request) {
                 return ResponseEntity.status(HttpStatus.CREATED)
                                 .body(ApiResponse.success("Create story successfully",
                                                 storyService.createStory(request)));
@@ -149,31 +119,7 @@ public class StoryController {
         @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
         public ResponseEntity<ApiResponse<StoryResponse>> updateStoryWithImage(
                         @PathVariable Long id,
-                        @RequestParam(required = false) String title,
-                        @RequestParam(required = false) Long authorId,
-                        @RequestParam(required = false) String description,
-                        @RequestParam(required = false) String status,
-                        @RequestParam(required = false) MultipartFile coverImage,
-                        @RequestParam(required = false) String categoryIds) {
-
-                String imageUrl = (coverImage != null && !coverImage.isEmpty())
-                                ? minIoService.uploadFile(coverImage, "story-covers")
-                                : null;
-
-                var request = new StoryRequest();
-                request.setTitle(title);
-                request.setAuthorId(authorId);
-                request.setDescription(description);
-                request.setImage(imageUrl);
-                request.setStatus(status);
-
-                if (categoryIds != null && !categoryIds.isEmpty()) {
-                        var categoryIdSet = Arrays.stream(categoryIds.split(","))
-                                        .map(String::trim)
-                                        .map(Long::parseLong)
-                                        .collect(Collectors.toSet());
-                        request.setCategoryIds(categoryIdSet);
-                }
+                        @ModelAttribute StoryRequest request) {
 
                 return ResponseEntity.ok(ApiResponse.success("Update story successfully",
                                 storyService.updateStory(id, request)));
@@ -206,20 +152,8 @@ public class StoryController {
         // Lọc truyện nâng cao
         @GetMapping("/filter")
         public ResponseEntity<ApiResponse<Page<StoryResponse>>> filterStories(
-                        @RequestParam(required = false) String keyword,
-                        @RequestParam(required = false) Long authorId,
-                        @RequestParam(required = false) String status,
-                        @RequestParam(required = false) Integer minChapters,
-                        @RequestParam(required = false) Integer maxChapters,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-                        @RequestParam(required = false) List<Long> categoryIds,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "id,desc") String sort) {
-                var stories = storyService.filterStories(
-                                keyword, authorId, status, minChapters, maxChapters,
-                                startDate, endDate, categoryIds, page, size, sort);
+                        @ModelAttribute StoryFilterCriteria criteria) {
+                var stories = storyService.filterStories(criteria);
                 return ResponseEntity.ok(ApiResponse.success("Get filtered stories successfully", stories));
         }
 }

@@ -1,10 +1,10 @@
 package com.example.truyen.service;
 
+import com.example.truyen.dto.request.StoryFilterCriteria;
 import com.example.truyen.dto.request.StoryRequest;
 import com.example.truyen.dto.response.StoryResponse;
 import org.springframework.data.domain.Page;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 // Interface StoryService
@@ -41,11 +41,7 @@ public interface StoryService {
     void increaseView(Long id);
 
     // Lọc truyện nâng cao
-    Page<StoryResponse> filterStories(
-            String keyword, Long authorId, String status,
-            Integer minChapters, Integer maxChapters,
-            LocalDateTime startDate, LocalDateTime endDate,
-            List<Long> categoryIds, int page, int size, String sort);
+    Page<StoryResponse> filterStories(StoryFilterCriteria criteria);
 
     // Lấy danh sách truyện của tác giả
     List<StoryResponse> getStoriesByAuthor(Long authorId);

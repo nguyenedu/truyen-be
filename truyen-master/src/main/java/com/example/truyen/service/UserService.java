@@ -6,7 +6,6 @@ import com.example.truyen.dto.request.UpdateUserRequest;
 import com.example.truyen.dto.response.UserResponse;
 import com.example.truyen.entity.User;
 import org.springframework.data.domain.Page;
-import org.springframework.web.multipart.MultipartFile;
 
 // Interface UserService
 public interface UserService {
@@ -40,12 +39,6 @@ public interface UserService {
 
     // Lấy User entity hiện tại
     User getCurrentUserEntity();
-
-    // Cập nhật thông tin người dùng với avatar
-    UserResponse updateUser(Long id, UpdateUserRequest request, MultipartFile avatar);
-
-    // Tạo người dùng mới với avatar
-    UserResponse createUser(CreateUserRequest request, MultipartFile avatar);
 
     // Tìm kiếm người dùng
     Page<UserResponse> searchUsers(String keyword, int page, int size, String sortField, String sortDir);

@@ -16,7 +16,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -57,22 +56,10 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserWithAvatar(
             @PathVariable Long id,
-            @RequestParam(required = false) String fullname,
-            @RequestParam(required = false) String email,
-            @RequestParam(required = false) String phone,
-            @RequestParam(required = false) String password,
-            @RequestParam(required = false) MultipartFile avatar,
-            @RequestParam(required = false) Boolean isActive) {
-
-        var request = new UpdateUserRequest();
-        request.setFullname(fullname);
-        request.setEmail(email);
-        request.setPhone(phone);
-        request.setPassword(password);
-        request.setIsActive(isActive);
+            @ModelAttribute UpdateUserRequest request) {
 
         return ResponseEntity.ok(
-                ApiResponse.success("Update user info successfully", userService.updateUser(id, request, avatar)));
+                ApiResponse.success("Update user info successfully", userService.updateUser(id, request)));
     }
 
     // Cập nhật thông tin người dùng với dữ liệu JSON
@@ -121,24 +108,8 @@ public class UserController {
     // Tạo người dùng mới kèm avatar (Admin, Super Admin)
     @PostMapping(consumes = { "multipart/form-data" })
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ApiResponse<UserResponse> createUserWithAvatar(
-            @RequestParam String username,
-            @RequestParam String password,
-            @RequestParam(required = false) String email,
-            @RequestParam(required = false) String fullname,
-            @RequestParam(required = false) String phone,
-            @RequestParam(required = false) MultipartFile avatar,
-            @RequestParam(required = false) String role) {
-
-        var request = new CreateUserRequest();
-        request.setUsername(username);
-        request.setPassword(password);
-        request.setEmail(email);
-        request.setFullname(fullname);
-        request.setPhone(phone);
-        request.setRole(role);
-
-        return ApiResponse.success("Create user successfully", userService.createUser(request, avatar));
+    public ApiResponse<UserResponse> createUserWithAvatar(@ModelAttribute CreateUserRequest request) {
+        return ApiResponse.success("Create user successfully", userService.createUser(request));
     }
 
     // Tạo người dùng mới với dữ liệu JSON (Admin, Super Admin)

@@ -1,6 +1,7 @@
 package com.example.truyen.service.impl;
 
 import com.example.truyen.dto.event.SearchEvent;
+import com.example.truyen.dto.request.StoryFilterCriteria;
 import com.example.truyen.dto.request.StoryRequest;
 import com.example.truyen.dto.response.StoryResponse;
 import com.example.truyen.entity.*;
@@ -8,6 +9,7 @@ import com.example.truyen.exception.BadRequestException;
 import com.example.truyen.exception.ResourceNotFoundException;
 import com.example.truyen.kafka.producer.SearchProducer;
 import com.example.truyen.repository.*;
+import com.example.truyen.service.MinIoService;
 import com.example.truyen.service.StoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +33,7 @@ public class StoryServiceImpl implements StoryService {
     private final AuthorRepository authorRepository;
     private final CategoryRepository categoryRepository;
     private final SearchProducer searchProducer;
+    private final MinIoService minIoService;
     private final RatingRepository ratingRepository;
 
     // Lấy danh sách truyện
@@ -95,6 +97,11 @@ public class StoryServiceImpl implements StoryService {
     @Transactional
     @Override
     public StoryResponse createStory(StoryRequest request) {
+        if (request.getCoverImage() != null && !request.getCoverImage().isEmpty()) {
+            String imageUrl = minIoService.uploadFile(request.getCoverImage(), "story-covers");
+            request.setImage(imageUrl);
+        }
+
         var author = authorRepository.findById(request.getAuthorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Author", "id", request.getAuthorId()));
 
@@ -136,6 +143,11 @@ public class StoryServiceImpl implements StoryService {
     public StoryResponse updateStory(Long id, StoryRequest request) {
         var story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", id));
+
+        if (request.getCoverImage() != null && !request.getCoverImage().isEmpty()) {
+            String imageUrl = minIoService.uploadFile(request.getCoverImage(), "story-covers");
+            request.setImage(imageUrl);
+        }
 
         if (request.getAuthorId() != null) {
             var author = authorRepository.findById(request.getAuthorId())
@@ -190,47 +202,36 @@ public class StoryServiceImpl implements StoryService {
     // Lọc truyện nâng cao
     @Transactional(readOnly = true)
     @Override
-    public Page<StoryResponse> filterStories(
-            String keyword,
-            Long authorId,
-            String status,
-            Integer minChapters,
-            Integer maxChapters,
-            LocalDateTime startDate,
-            LocalDateTime endDate,
-            List<Long> categoryIds,
-            int page,
-            int size,
-            String sort) {
-        var sortParams = sort.split(",");
+    public Page<StoryResponse> filterStories(StoryFilterCriteria criteria) {
+        var sortParams = criteria.getSort().split(",");
         var sortField = sortParams[0];
         var sortDir = sortParams.length > 1 ? sortParams[1] : "asc";
 
         var direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
-        var pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+        var pageable = PageRequest.of(criteria.getPage(), criteria.getSize(), Sort.by(direction, sortField));
 
         Story.Status storyStatus = null;
-        if (status != null && !status.trim().isEmpty()) {
+        if (criteria.getStatus() != null && !criteria.getStatus().trim().isEmpty()) {
             try {
-                storyStatus = Story.Status.valueOf(status.toUpperCase());
+                storyStatus = Story.Status.valueOf(criteria.getStatus().toUpperCase());
             } catch (IllegalArgumentException e) {
 
             }
         }
 
-        var categoryCount = (categoryIds != null && !categoryIds.isEmpty())
-                ? categoryIds.size()
+        var categoryCount = (criteria.getCategoryIds() != null && !criteria.getCategoryIds().isEmpty())
+                ? criteria.getCategoryIds().size()
                 : null;
 
         return storyRepository.filterStories(
-                keyword,
-                authorId,
+                criteria.getKeyword(),
+                criteria.getAuthorId(),
                 storyStatus,
-                minChapters,
-                maxChapters,
-                startDate,
-                endDate,
-                categoryIds,
+                criteria.getMinChapters(),
+                criteria.getMaxChapters(),
+                criteria.getStartDate(),
+                criteria.getEndDate(),
+                criteria.getCategoryIds(),
                 categoryCount,
                 pageable).map(this::convertToResponse);
     }
