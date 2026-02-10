@@ -1,7 +1,7 @@
 package com.example.truyen.controller;
 
 import com.example.truyen.dto.request.CreateUserRequest;
-import com.example.truyen.service.MinIoService;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
-    private final MinIoService minIoService;
 
     // Lấy danh sách tất cả người dùng (Admin, Super Admin)
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
@@ -65,18 +64,15 @@ public class UserController {
             @RequestParam(required = false) MultipartFile avatar,
             @RequestParam(required = false) Boolean isActive) {
 
-        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar, "avatars") : null;
-
         var request = new UpdateUserRequest();
         request.setFullname(fullname);
         request.setEmail(email);
         request.setPhone(phone);
         request.setPassword(password);
-        request.setAvatar(avatarUrl);
         request.setIsActive(isActive);
 
         return ResponseEntity.ok(
-                ApiResponse.success("Update user info successfully", userService.updateUser(id, request)));
+                ApiResponse.success("Update user info successfully", userService.updateUser(id, request, avatar)));
     }
 
     // Cập nhật thông tin người dùng với dữ liệu JSON
@@ -134,18 +130,15 @@ public class UserController {
             @RequestParam(required = false) MultipartFile avatar,
             @RequestParam(required = false) String role) {
 
-        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar, "avatars") : null;
-
         var request = new CreateUserRequest();
         request.setUsername(username);
         request.setPassword(password);
         request.setEmail(email);
         request.setFullname(fullname);
         request.setPhone(phone);
-        request.setAvatar(avatarUrl);
         request.setRole(role);
 
-        return ApiResponse.success("Create user successfully", userService.createUser(request));
+        return ApiResponse.success("Create user successfully", userService.createUser(request, avatar));
     }
 
     // Tạo người dùng mới với dữ liệu JSON (Admin, Super Admin)

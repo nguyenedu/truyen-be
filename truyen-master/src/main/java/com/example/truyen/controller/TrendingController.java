@@ -4,7 +4,6 @@ import com.example.truyen.dto.request.TrackViewRequest;
 import com.example.truyen.dto.response.StoryStatsResponse;
 import com.example.truyen.dto.response.StoryTrendingDTO;
 import com.example.truyen.entity.Ranking;
-import com.example.truyen.entity.Story;
 import com.example.truyen.repository.RatingRepository;
 import com.example.truyen.repository.FavoriteRepository;
 import com.example.truyen.repository.CommentRepository;

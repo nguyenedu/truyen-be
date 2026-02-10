@@ -11,8 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/ratings")
 @RequiredArgsConstructor
@@ -57,7 +55,7 @@ public class RatingController {
 
     // Lấy thống kê đánh giá của truyện
     @GetMapping("/story/{storyId}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getStoryRatingInfo(@PathVariable Long storyId) {
+    public ResponseEntity<ApiResponse<RatingResponse>> getStoryRatingInfo(@PathVariable Long storyId) {
         return ResponseEntity.ok(
                 ApiResponse.success("Get rating info successfully", ratingService.getStoryRatingInfo(storyId)));
     }

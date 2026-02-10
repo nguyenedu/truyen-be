@@ -1,6 +1,5 @@
 package com.example.truyen.aspect;
 
-import com.example.truyen.entity.ActivityLog;
 import com.example.truyen.entity.User;
 import com.example.truyen.service.ActivityLogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,8 +17,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
-import java.util.Arrays;
 
 @Aspect
 @Component
@@ -28,6 +25,7 @@ import java.util.Arrays;
 public class LoggingAspect {
 
     private final ActivityLogService activityLogService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Pointcut("execution(* com.example.truyen.service..*(..)) && " +
             "!execution(* com.example.truyen.service.ActivityLogService.*(..))")
@@ -47,7 +45,7 @@ public class LoggingAspect {
 
         // Lấy tham số
         Object[] args = joinPoint.getArgs();
-        String parameters = activityLogService.convertObjectToJson(args);
+        String parameters = convertObjectToJson(args);
 
         // Lấy thông tin người dùng và IP
         Long userId = getCurrentUserId();
@@ -64,7 +62,7 @@ public class LoggingAspect {
             long executionTime = System.currentTimeMillis() - startTime;
 
             // Chuyển đổi kết quả
-            String resultJson = activityLogService.convertObjectToJson(result);
+            String resultJson = convertObjectToJson(result);
 
             // Ghi log console
             log.info("<<< {} - Time: {}ms - Result: {}",
@@ -296,5 +294,16 @@ public class LoggingAspect {
                         : parameters,
                 errorMessage,
                 executionTime);
+    }
+
+    private String convertObjectToJson(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return String.valueOf(obj);
+        }
     }
 }

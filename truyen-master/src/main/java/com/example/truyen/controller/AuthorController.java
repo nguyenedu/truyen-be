@@ -45,7 +45,7 @@ public class AuthorController {
             @RequestParam String name,
             @RequestParam(required = false) String bio,
             @RequestParam(required = false) MultipartFile avatar) {
-        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar, "avatars") : null;
+        String avatarUrl = (avatar != null && !avatar.isEmpty()) ? minIoService.uploadFile(avatar,"avatars") : null;
 
         AuthorRequest request = new AuthorRequest();
         request.setName(name);

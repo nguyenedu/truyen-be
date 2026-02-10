@@ -1,7 +1,6 @@
 package com.example.truyen.controller;
 
 import com.example.truyen.service.MinIoService;
-import com.example.truyen.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

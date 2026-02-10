@@ -44,6 +44,19 @@ public class RedisKeyConstants {
     // max:views:{days}d
     public static final String MAX_VIEWS_PREFIX = "max:views:";
 
+    // Mục đích: Đếm tổng lượt xem của story (cache). Key: view:count:{storyId}
+    public static final String VIEW_COUNT_PREFIX = "view:count:";
+
+    // Mục đích: Track unique viewers theo ngày. Key:
+    // unique:viewers:{storyId}:{date}
+    public static final String UNIQUE_VIEWERS_PREFIX = "unique:viewers:";
+
+    // Mục đích: Đếm lượt xem theo ngày. Key: daily:view:{storyId}:{date}
+    public static final String DAILY_VIEW_PREFIX = "daily:view:";
+
+    // Mục đích: Prefix cho blacklist token. Key: token:blacklist:{token}
+    public static final String TOKEN_BLACKLIST_PREFIX = "token:blacklist:";
+
     // Private constructor để ngăn instantiate class
     private RedisKeyConstants() {
         throw new AssertionError("Cannot instantiate constants class");
