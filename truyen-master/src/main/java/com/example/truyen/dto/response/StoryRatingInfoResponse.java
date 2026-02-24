@@ -5,20 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RatingResponse {
-    private Long id;
-    private Long userId;
-    private String username;
+public class StoryRatingInfoResponse {
     private Long storyId;
     private String storyTitle;
-    private Integer rating;
-    private String review;
+    private Double averageRating;
     private Long totalRatings;
-    private LocalDateTime createdAt;
 }

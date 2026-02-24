@@ -95,11 +95,13 @@ public class RatingServiceImpl implements RatingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Story", "id", storyId));
 
         Double averageRating = ratingRepository.getAverageRating(storyId);
+        Long totalRatings = ratingRepository.countByStoryId(storyId);
 
         return RatingResponse.builder()
                 .storyId(storyId)
                 .storyTitle(story.getTitle())
                 .rating(averageRating != null ? (int) Math.round(averageRating) : 0)
+                .totalRatings(totalRatings)
                 .build();
     }
 
