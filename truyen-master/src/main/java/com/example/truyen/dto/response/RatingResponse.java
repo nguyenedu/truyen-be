@@ -19,6 +19,5 @@ public class RatingResponse {
     private String storyTitle;
     private Integer rating;
     private String review;
-    private Long totalRatings;
     private LocalDateTime createdAt;
 }
