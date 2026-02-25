@@ -4,7 +4,6 @@ import com.example.truyen.dto.response.DashboardStatsResponse;
 import com.example.truyen.dto.response.DashboardStatsResponse.*;
 import com.example.truyen.entity.ActivityLog;
 import com.example.truyen.entity.Author;
-import com.example.truyen.entity.Story;
 import com.example.truyen.entity.User;
 import com.example.truyen.repository.*;
 import com.example.truyen.service.DashboardService;
