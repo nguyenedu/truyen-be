@@ -261,17 +261,18 @@ public class LoggingAspect {
                 Method getIdMethod = result.getClass().getMethod("getId");
                 Object id = getIdMethod.invoke(result);
                 if (id instanceof Integer) {
-                    return (Long) id;
+                    return ((Integer) id).longValue();
                 } else if (id instanceof Long) {
-                    return ((Long) id).longValue();
+                    return (Long) id;
                 }
             }
             if (args.length > 0 && args[0] instanceof Long) {
-                return ((Long) args[0]).longValue();
-            } else if (args.length > 0 && args[0] instanceof Integer) {
                 return (Long) args[0];
+            } else if (args.length > 0 && args[0] instanceof Integer) {
+                return ((Integer) args[0]).longValue();
             }
         } catch (Exception e) {
+            log.debug("Cannot extract record ID: {}", e.getMessage());
         }
         return null;
     }
