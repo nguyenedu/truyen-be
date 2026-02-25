@@ -11,4 +11,10 @@ public interface StoryViewRepository extends JpaRepository<StoryView, Long> {
 
     // Đếm lượt xem theo storyId từ thời điểm cụ thể
     Long countByStoryIdAndViewedAtAfter(Long storyId, LocalDateTime since);
+
+    // Dashboard: Tổng lượt xem sau thời điểm
+    long countByViewedAtAfter(LocalDateTime since);
+
+    // Dashboard: Tổng lượt xem trong khoảng thời gian
+    long countByViewedAtBetween(LocalDateTime start, LocalDateTime end);
 }

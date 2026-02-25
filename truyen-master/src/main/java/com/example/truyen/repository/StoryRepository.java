@@ -15,6 +15,33 @@ import java.util.List;
 @Repository
 public interface StoryRepository extends JpaRepository<Story, Long> {
 
+        // Dashboard: Đếm story tạo sau thời điểm
+        long countByCreatedAtAfter(LocalDateTime since);
+
+        // Dashboard: Đếm story tạo trong khoảng thời gian
+        long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+        // Dashboard: Tổng lượt xem tất cả truyện
+        @Query("SELECT COALESCE(SUM(s.totalViews), 0) FROM Story s")
+        long sumTotalViews();
+
+        // Dashboard: Đếm story theo ngày cho biểu đồ
+        @Query("SELECT FUNCTION('DATE', s.createdAt) as date, COUNT(s) as cnt " +
+                        "FROM Story s WHERE s.createdAt BETWEEN :start AND :end " +
+                        "GROUP BY FUNCTION('DATE', s.createdAt) ORDER BY date ASC")
+        List<Object[]> countStoriesByDateRange(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end);
+
+        // Dashboard: Top stories theo lượt xem kèm author (tránh N+1)
+        @Query("SELECT s FROM Story s LEFT JOIN FETCH s.author ORDER BY s.totalViews DESC")
+        List<Story> findTopByViewsWithAuthor(Pageable pageable);
+
+        // Dashboard: Top tác giả theo số truyện
+        @Query("SELECT s.author, COUNT(s) FROM Story s WHERE s.author IS NOT NULL " +
+                        "GROUP BY s.author ORDER BY COUNT(s) DESC")
+        List<Object[]> findTopAuthorsByStoryCount(Pageable pageable);
+
         Page<Story> findByStatus(Story.Status status, Pageable pageable);
 
         Page<Story> findByIsHotTrue(Pageable pageable);

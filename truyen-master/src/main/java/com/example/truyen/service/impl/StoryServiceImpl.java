@@ -14,14 +14,13 @@ import com.example.truyen.service.StoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,14 +35,15 @@ public class StoryServiceImpl implements StoryService {
     private final MinIoService minIoService;
     private final RatingRepository ratingRepository;
 
-    // Lấy danh sách truyện
+    // Lấy danh sách truyện (batch rating query)
     @Transactional(readOnly = true)
     @Override
     public Page<StoryResponse> getAllStories(int page, int size) {
-        return storyRepository.findAll(PageRequest.of(page, size)).map(this::convertToResponse);
+        var storiesPage = storyRepository.findAll(PageRequest.of(page, size));
+        return convertToResponsePage(storiesPage);
     }
 
-    // Lấy chi tiết truyện theo ID
+    // Lấy chi tiết truyện theo ID (single query vẫn OK)
     @Transactional(readOnly = true)
     @Override
     public StoryResponse getStoryById(Long id) {
@@ -56,8 +56,8 @@ public class StoryServiceImpl implements StoryService {
     @Transactional(readOnly = true)
     @Override
     public Page<StoryResponse> searchStories(String keyword, int page, int size) {
-        var results = storyRepository.searchByTitle(keyword, PageRequest.of(page, size))
-                .map(this::convertToResponse);
+        var storiesPage = storyRepository.searchByTitle(keyword, PageRequest.of(page, size));
+        var results = convertToResponsePage(storiesPage);
 
         // Gửi event search vào Kafka
         try {
@@ -77,20 +77,23 @@ public class StoryServiceImpl implements StoryService {
     @Transactional(readOnly = true)
     @Override
     public Page<StoryResponse> getStoriesByCategory(Long categoryId, int page, int size) {
-        return storyRepository.findByCategoryId(categoryId, PageRequest.of(page, size)).map(this::convertToResponse);
+        var storiesPage = storyRepository.findByCategoryId(categoryId, PageRequest.of(page, size));
+        return convertToResponsePage(storiesPage);
     }
 
     // Lấy danh sách truyện HOT
     @Override
     public Page<StoryResponse> getHotStories(int page, int size) {
-        return storyRepository.findByIsHotTrue(PageRequest.of(page, size)).map(this::convertToResponse);
+        var storiesPage = storyRepository.findByIsHotTrue(PageRequest.of(page, size));
+        return convertToResponsePage(storiesPage);
     }
 
     // Lấy danh sách truyện mới nhất
     @Transactional(readOnly = true)
     @Override
     public Page<StoryResponse> getLatestStories(int page, int size) {
-        return storyRepository.findAllOrderByCreatedAtDesc(PageRequest.of(page, size)).map(this::convertToResponse);
+        var storiesPage = storyRepository.findAllOrderByCreatedAtDesc(PageRequest.of(page, size));
+        return convertToResponsePage(storiesPage);
     }
 
     // Tạo truyện mới
@@ -223,7 +226,7 @@ public class StoryServiceImpl implements StoryService {
                 ? criteria.getCategoryIds().size()
                 : null;
 
-        return storyRepository.filterStories(
+        var storiesPage = storyRepository.filterStories(
                 criteria.getKeyword(),
                 criteria.getAuthorId(),
                 storyStatus,
@@ -233,25 +236,47 @@ public class StoryServiceImpl implements StoryService {
                 criteria.getEndDate(),
                 criteria.getCategoryIds(),
                 categoryCount,
-                pageable).map(this::convertToResponse);
+                pageable);
+        return convertToResponsePage(storiesPage);
     }
 
     // Lấy danh sách truyện của tác giả
     @Transactional(readOnly = true)
     @Override
     public List<StoryResponse> getStoriesByAuthor(Long authorId) {
-        return storyRepository.findByAuthorId(authorId)
-                .stream()
-                .map(this::convertToResponse)
+        var stories = storyRepository.findByAuthorId(authorId);
+        return convertToResponseList(stories);
+    }
+
+    // ===== BATCH CONVERSION (tránh N+1 query) =====
+
+    // Chuyển đổi Page<Story> sang Page<StoryResponse> với batch rating query
+    private Page<StoryResponse> convertToResponsePage(Page<Story> storiesPage) {
+        var stories = storiesPage.getContent();
+        var responses = convertToResponseList(stories);
+        return new PageImpl<>(responses, storiesPage.getPageable(), storiesPage.getTotalElements());
+    }
+
+    // Chuyển đổi List<Story> sang List<StoryResponse> — chỉ 2 queries cho rating
+    private List<StoryResponse> convertToResponseList(List<Story> stories) {
+        if (stories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 1 query lấy toàn bộ averageRating cho tất cả stories
+        var storyIds = stories.stream().map(Story::getId).toList();
+        Map<Long, Double> avgRatingMap = buildAvgRatingMap(storyIds);
+        Map<Long, Long> countRatingMap = buildCountRatingMap(storyIds);
+
+        // Map kết quả cho từng story (không cần query thêm)
+        return stories.stream()
+                .map(story -> buildStoryResponse(story, avgRatingMap, countRatingMap))
                 .toList();
     }
 
+    // Chuyển đổi 1 Story (dùng cho getById, create, update — chỉ 1 story nên N+1
+    // không ảnh hưởng)
     private StoryResponse convertToResponse(Story story) {
-        var categoryNames = story.getCategories().stream()
-                .map(Category::getName)
-                .collect(Collectors.toSet());
-
-        // Lấy đánh giá trung bình và tổng số đánh giá
         var averageRating = ratingRepository.getAverageRating(story.getId());
         var totalRatingsCount = ratingRepository.countByStoryId(story.getId());
 
@@ -266,11 +291,52 @@ public class StoryServiceImpl implements StoryService {
                 .totalChapters(story.getTotalChapters())
                 .totalViews(story.getTotalViews())
                 .isHot(story.getIsHot())
-                .categories(categoryNames)
+                .categories(story.getCategories().stream().map(Category::getName).collect(Collectors.toSet()))
                 .createdAt(story.getCreatedAt())
                 .updatedAt(story.getUpdatedAt())
                 .averageRating(averageRating != null ? Math.round(averageRating * 10.0) / 10.0 : 0.0)
                 .totalRatings(totalRatingsCount != null ? totalRatingsCount.intValue() : 0)
                 .build();
+    }
+
+    // Build StoryResponse từ pre-fetched rating maps
+    private StoryResponse buildStoryResponse(Story story, Map<Long, Double> avgRatingMap,
+            Map<Long, Long> countRatingMap) {
+        var avgRating = avgRatingMap.getOrDefault(story.getId(), 0.0);
+        var totalRatings = countRatingMap.getOrDefault(story.getId(), 0L);
+
+        return StoryResponse.builder()
+                .id(story.getId())
+                .title(story.getTitle())
+                .authorName(story.getAuthor() != null ? story.getAuthor().getName() : null)
+                .authorId(story.getAuthor() != null ? story.getAuthor().getId() : null)
+                .description(story.getDescription())
+                .image(story.getImage())
+                .status(story.getStatus().name())
+                .totalChapters(story.getTotalChapters())
+                .totalViews(story.getTotalViews())
+                .isHot(story.getIsHot())
+                .categories(story.getCategories().stream().map(Category::getName).collect(Collectors.toSet()))
+                .createdAt(story.getCreatedAt())
+                .updatedAt(story.getUpdatedAt())
+                .averageRating(Math.round(avgRating * 10.0) / 10.0)
+                .totalRatings(totalRatings.intValue())
+                .build();
+    }
+
+    // Build map storyId → averageRating từ batch query
+    private Map<Long, Double> buildAvgRatingMap(List<Long> storyIds) {
+        return ratingRepository.getAverageRatingsByStoryIds(storyIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Double) row[1]));
+    }
+
+    // Build map storyId → totalRatings từ batch query
+    private Map<Long, Long> buildCountRatingMap(List<Long> storyIds) {
+        return ratingRepository.countByStoryIds(storyIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]));
     }
 }

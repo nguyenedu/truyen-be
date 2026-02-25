@@ -29,6 +29,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final UserRepository userRepository;
     private final AuthorRepository authorRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final StoryViewRepository storyViewRepository;
 
     // Lấy toàn bộ thống kê dashboard
     @Transactional(readOnly = true)
@@ -51,23 +52,23 @@ public class DashboardServiceImpl implements DashboardService {
             previousPeriodEnd = now.minusDays(30);
         }
 
-        // Tổng quan
+        // Tổng quan (dùng COUNT/SUM trên DB thay vì findAll)
         stats.setTotalStories(storyRepository.count());
         stats.setTotalAuthors(authorRepository.count());
         stats.setTotalUsers(userRepository.count());
-        stats.setTotalViews(getTotalViews());
+        stats.setTotalViews(storyRepository.sumTotalViews());
 
-        // So sánh với kỳ trước
+        // So sánh với kỳ trước (dùng COUNT query trên DB)
         stats.setStoriesComparison(compareStories(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setAuthorsComparison(compareAuthors(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setUsersComparison(compareUsers(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
         stats.setViewsComparison(compareViews(currentPeriodStart, previousPeriodStart, previousPeriodEnd));
 
-        // Người dùng/Tác giả hàng đầu
+        // Top stories/authors (dùng JPQL query với JOIN FETCH)
         stats.setTopStoriesByViews(getTopStoriesByViews());
         stats.setTopAuthorsByStories(getTopAuthorsByStories());
 
-        // Biểu đồ
+        // Biểu đồ (1 query GROUP BY DATE thay vì 30x findAll)
         stats.setNewStoriesChart(getNewStoriesChart(period));
         stats.setNewUsersChart(getNewUsersChart(period));
 
@@ -77,51 +78,31 @@ public class DashboardServiceImpl implements DashboardService {
         return stats;
     }
 
-    private Long getTotalViews() {
-        return storyRepository.findAll().stream()
-                .mapToLong(story -> story.getTotalViews() != null ? story.getTotalViews() : 0L)
-                .sum();
-    }
-
+    // So sánh story: 2 COUNT queries thay vì 2x findAll()
     private StatsComparison compareStories(LocalDateTime currentStart, LocalDateTime prevStart, LocalDateTime prevEnd) {
-        long currentCount = storyRepository.findAll().stream()
-                .filter(s -> s.getCreatedAt().isAfter(currentStart))
-                .count();
-
-        long previousCount = storyRepository.findAll().stream()
-                .filter(s -> s.getCreatedAt().isAfter(prevStart) && s.getCreatedAt().isBefore(prevEnd))
-                .count();
-
+        long currentCount = storyRepository.countByCreatedAtAfter(currentStart);
+        long previousCount = storyRepository.countByCreatedAtBetween(prevStart, prevEnd);
         return calculateComparison(currentCount, previousCount);
     }
 
+    // So sánh author: 2 COUNT queries thay vì 2x findAll()
     private StatsComparison compareAuthors(LocalDateTime currentStart, LocalDateTime prevStart, LocalDateTime prevEnd) {
-        long currentCount = authorRepository.findAll().stream()
-                .filter(a -> a.getCreatedAt().isAfter(currentStart))
-                .count();
-
-        long previousCount = authorRepository.findAll().stream()
-                .filter(a -> a.getCreatedAt().isAfter(prevStart) && a.getCreatedAt().isBefore(prevEnd))
-                .count();
-
+        long currentCount = authorRepository.countByCreatedAtAfter(currentStart);
+        long previousCount = authorRepository.countByCreatedAtBetween(prevStart, prevEnd);
         return calculateComparison(currentCount, previousCount);
     }
 
+    // So sánh user: 2 COUNT queries thay vì 2x findAll()
     private StatsComparison compareUsers(LocalDateTime currentStart, LocalDateTime prevStart, LocalDateTime prevEnd) {
-        long currentCount = userRepository.findAll().stream()
-                .filter(u -> u.getCreatedAt().isAfter(currentStart))
-                .count();
-
-        long previousCount = userRepository.findAll().stream()
-                .filter(u -> u.getCreatedAt().isAfter(prevStart) && u.getCreatedAt().isBefore(prevEnd))
-                .count();
-
+        long currentCount = userRepository.countByCreatedAtAfter(currentStart);
+        long previousCount = userRepository.countByCreatedAtBetween(prevStart, prevEnd);
         return calculateComparison(currentCount, previousCount);
     }
 
+    // So sánh views: dùng StoryViewRepository thay vì dữ liệu giả
     private StatsComparison compareViews(LocalDateTime currentStart, LocalDateTime prevStart, LocalDateTime prevEnd) {
-        long currentViews = getTotalViews();
-        long previousViews = (long) (currentViews * 0.9); // Simulated data
+        long currentViews = storyViewRepository.countByViewedAtAfter(currentStart);
+        long previousViews = storyViewRepository.countByViewedAtBetween(prevStart, prevEnd);
         return calculateComparison(currentViews, previousViews);
     }
 
@@ -141,8 +122,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
+    // Top stories: 1 query với JOIN FETCH thay vì findAll + N+1
     private List<TopStoryDTO> getTopStoriesByViews() {
-        return storyRepository.findAll(PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "totalViews")))
+        return storyRepository.findTopByViewsWithAuthor(PageRequest.of(0, 10))
                 .stream()
                 .map(story -> TopStoryDTO.builder()
                         .id(story.getId())
@@ -155,63 +137,79 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
     }
 
+    // Top authors: 1 JPQL GROUP BY query thay vì findAll + groupBy trên Java
     private List<TopAuthorDTO> getTopAuthorsByStories() {
-        Map<Author, Long> authorStoryCount = storyRepository.findAll().stream()
-                .filter(story -> story.getAuthor() != null)
-                .collect(Collectors.groupingBy(Story::getAuthor, Collectors.counting()));
-
-        return authorStoryCount.entrySet().stream()
-                .sorted(Map.Entry.<Author, Long>comparingByValue().reversed())
-                .limit(10)
-                .map(entry -> TopAuthorDTO.builder()
-                        .id(entry.getKey().getId())
-                        .name(entry.getKey().getName())
-                        .totalStories(entry.getValue())
-                        .avatar(entry.getKey().getAvatar())
-                        .build())
+        return storyRepository.findTopAuthorsByStoryCount(PageRequest.of(0, 10))
+                .stream()
+                .map(row -> {
+                    Author author = (Author) row[0];
+                    Long storyCount = (Long) row[1];
+                    return TopAuthorDTO.builder()
+                            .id(author.getId())
+                            .name(author.getName())
+                            .totalStories(storyCount)
+                            .avatar(author.getAvatar())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
+    // Biểu đồ story mới: 1 query GROUP BY DATE thay vì 30x findAll()
     private List<ChartDataPoint> getNewStoriesChart(String period) {
         int days = "week".equalsIgnoreCase(period) ? 7 : 30;
         LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        // 1 query lấy tất cả ngày có data
+        var dbResults = storyRepository.countStoriesByDateRange(start, end);
+        Map<String, Long> dateCountMap = new HashMap<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        for (Object[] row : dbResults) {
+            String date = row[0].toString();
+            Long count = (Long) row[1];
+            dateCountMap.put(date, count);
+        }
+
+        // Điền đủ tất cả các ngày (kể cả ngày không có data = 0)
         List<ChartDataPoint> chartData = new ArrayList<>();
-
         for (int i = days - 1; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
-            LocalDateTime startOfDay = date.atStartOfDay();
-            LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
-
-            long count = storyRepository.findAll().stream()
-                    .filter(s -> s.getCreatedAt().isAfter(startOfDay) && s.getCreatedAt().isBefore(endOfDay))
-                    .count();
-
+            String dateStr = today.minusDays(i).format(formatter);
             chartData.add(ChartDataPoint.builder()
-                    .date(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-                    .count(count)
+                    .date(dateStr)
+                    .count(dateCountMap.getOrDefault(dateStr, 0L))
                     .build());
         }
 
         return chartData;
     }
 
+    // Biểu đồ user mới: 1 query GROUP BY DATE thay vì 30x findAll()
     private List<ChartDataPoint> getNewUsersChart(String period) {
         int days = "week".equalsIgnoreCase(period) ? 7 : 30;
         LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        // 1 query lấy tất cả ngày có data
+        var dbResults = userRepository.countUsersByDateRange(start, end);
+        Map<String, Long> dateCountMap = new HashMap<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        for (Object[] row : dbResults) {
+            String date = row[0].toString();
+            Long count = (Long) row[1];
+            dateCountMap.put(date, count);
+        }
+
+        // Điền đủ tất cả các ngày
         List<ChartDataPoint> chartData = new ArrayList<>();
-
         for (int i = days - 1; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
-            LocalDateTime startOfDay = date.atStartOfDay();
-            LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
-
-            long count = userRepository.findAll().stream()
-                    .filter(u -> u.getCreatedAt().isAfter(startOfDay) && u.getCreatedAt().isBefore(endOfDay))
-                    .count();
-
+            String dateStr = today.minusDays(i).format(formatter);
             chartData.add(ChartDataPoint.builder()
-                    .date(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-                    .count(count)
+                    .date(dateStr)
+                    .count(dateCountMap.getOrDefault(dateStr, 0L))
                     .build());
         }
 
