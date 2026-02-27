@@ -37,6 +37,14 @@ public class Chapter {
     @Builder.Default
     private Integer views = 0;
 
+    @Column(name = "is_locked", nullable = false)
+    @Builder.Default
+    private Boolean isLocked = false;
+
+    @Column(name = "coins_price", nullable = false)
+    @Builder.Default
+    private Integer coinsPrice = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
