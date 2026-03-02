@@ -19,5 +19,8 @@ public class ChapterResponse {
     private String title;
     private String content;
     private Integer views;
+    private Boolean isLocked;
+    private Integer coinsPrice;
+    private Boolean hasAccess;
     private LocalDateTime createdAt;
 }

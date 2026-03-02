@@ -3,6 +3,7 @@ package com.example.truyen.controller;
 import com.example.truyen.dto.request.ChapterRequest;
 import com.example.truyen.dto.response.ApiResponse;
 import com.example.truyen.dto.response.ChapterResponse;
+import com.example.truyen.service.ChapterAccessService;
 import com.example.truyen.service.ChapterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.List;
 public class ChapterController {
 
     private final ChapterService chapterService;
+    private final ChapterAccessService chapterAccessService;
 
     // Lấy danh sách chương của truyện
     @GetMapping("/story/{storyId}")
@@ -42,6 +44,21 @@ public class ChapterController {
             @PathVariable Integer chapterNumber) {
         ChapterResponse chapter = chapterService.getChapterByStoryAndNumber(storyId, chapterNumber);
         return ResponseEntity.ok(ApiResponse.success("Chapter retrieved successfully", chapter));
+    }
+
+    // Kiểm tra quyền đọc chương (có thể gọi trước khi mở chapter)
+    @GetMapping("/{id}/access")
+    public ResponseEntity<ApiResponse<Boolean>> checkAccess(@PathVariable Long id) {
+        boolean hasAccess = chapterAccessService.hasAccess(id);
+        return ResponseEntity.ok(ApiResponse.success("Access checked", hasAccess));
+    }
+
+    // Mở khóa chương bằng xu (yêu cầu đăng nhập)
+    @PostMapping("/{id}/unlock")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<String>> unlockChapter(@PathVariable Long id) {
+        chapterAccessService.unlockChapter(id);
+        return ResponseEntity.ok(ApiResponse.success("Chapter unlocked successfully", null));
     }
 
     // Tạo chương mới (Admin, Super Admin)
@@ -72,4 +89,5 @@ public class ChapterController {
         chapterService.deleteChapter(id);
         return ResponseEntity.ok(ApiResponse.success("Delete chapter successfully", null));
     }
+
 }

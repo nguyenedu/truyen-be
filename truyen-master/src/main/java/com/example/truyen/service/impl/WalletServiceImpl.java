@@ -42,7 +42,11 @@ public class WalletServiceImpl implements WalletService {
     @Override
     public void addCoins(Long userId, int amount, String description, Long refId) {
         UserWallet wallet = walletRepository.findByUserIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Wallet", "userId", userId));
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                    return walletRepository.save(UserWallet.builder().user(user).balance(0).build());
+                });
 
         int newBalance = wallet.getBalance() + amount;
         wallet.setBalance(newBalance);

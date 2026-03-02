@@ -87,6 +87,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/trending/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ratings/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/coin-packages/**").permitAll()
+                        .requestMatchers("/api/payments/vnpay-return").permitAll()
 
                         // Swagger
                         .requestMatchers("/swagger-ui/**").permitAll()

@@ -8,6 +8,7 @@ import com.example.truyen.exception.BadRequestException;
 import com.example.truyen.exception.ResourceNotFoundException;
 import com.example.truyen.repository.ChapterRepository;
 import com.example.truyen.repository.StoryRepository;
+import com.example.truyen.service.ChapterAccessService;
 import com.example.truyen.service.ChapterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ChapterServiceImpl implements ChapterService {
 
     private final ChapterRepository chapterRepository;
     private final StoryRepository storyRepository;
+    private final ChapterAccessService chapterAccessService;
 
     // Lấy danh sách chương của truyện
     @Transactional(readOnly = true)
@@ -132,14 +134,18 @@ public class ChapterServiceImpl implements ChapterService {
 
     // Chuyển đổi từ entity sang DTO response
     private ChapterResponse convertToResponse(Chapter chapter) {
+        boolean hasAccess = chapterAccessService.hasAccess(chapter.getId());
         return ChapterResponse.builder()
                 .id(chapter.getId())
                 .storyId(chapter.getStory().getId())
                 .storyTitle(chapter.getStory().getTitle())
                 .chapterNumber(chapter.getChapterNumber())
                 .title(chapter.getTitle())
-                .content(chapter.getContent())
+                .content(chapter.getIsLocked() && !hasAccess ? null : chapter.getContent())
                 .views(chapter.getViews())
+                .isLocked(chapter.getIsLocked())
+                .coinsPrice(chapter.getCoinsPrice())
+                .hasAccess(hasAccess)
                 .createdAt(chapter.getCreatedAt())
                 .build();
     }
