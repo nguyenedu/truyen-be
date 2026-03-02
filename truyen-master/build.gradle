@@ -63,8 +63,6 @@ dependencies {
     implementation 'io.minio:minio:8.5.7'
 
     implementation 'org.springframework.boot:spring-boot-starter-aop'
-
-    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 }
 
 tasks.named('test') {
