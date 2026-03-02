@@ -118,6 +118,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .map(o -> toResponse(o, null));
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public Page<PaymentOrderResponse> getAllOrders(Pageable pageable) {
+        return paymentOrderRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(o -> toResponse(o, null));
+    }
+
     private User getCurrentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)

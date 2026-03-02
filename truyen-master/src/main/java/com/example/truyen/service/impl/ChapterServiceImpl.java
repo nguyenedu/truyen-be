@@ -74,6 +74,11 @@ public class ChapterServiceImpl implements ChapterService {
         if (chapterRepository.existsByStoryIdAndChapterNumber(request.getStoryId(), request.getChapterNumber())) {
             throw new BadRequestException("Chapter " + request.getChapterNumber() + " already exists");
         }
+        boolean locked = Boolean.TRUE.equals(request.getIsLocked());
+        int price = (request.getCoinsPrice() != null) ? request.getCoinsPrice() : 0;
+        if (locked && price <= 0) {
+            throw new BadRequestException("Chương VIP phải có giá xu > 0");
+        }
 
         Chapter chapter = Chapter.builder()
                 .story(story)
@@ -81,6 +86,8 @@ public class ChapterServiceImpl implements ChapterService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .views(0)
+                .isLocked(locked)
+                .coinsPrice(locked ? price : 0)
                 .build();
 
         Chapter savedChapter = chapterRepository.save(chapter);
@@ -111,6 +118,23 @@ public class ChapterServiceImpl implements ChapterService {
             chapter.setTitle(request.getTitle());
         if (request.getContent() != null)
             chapter.setContent(request.getContent());
+
+        // Cập nhật trạng thái VIP
+        if (request.getIsLocked() != null) {
+            boolean locked = Boolean.TRUE.equals(request.getIsLocked());
+            int price = (request.getCoinsPrice() != null) ? request.getCoinsPrice() : 0;
+            if (locked && price <= 0) {
+                throw new BadRequestException("Chương VIP phải có giá xu > 0");
+            }
+            chapter.setIsLocked(locked);
+            chapter.setCoinsPrice(locked ? price : 0); // nếu unlock thì reset giá về 0
+        } else if (request.getCoinsPrice() != null && chapter.getIsLocked()) {
+            // Chỉ cập nhật giá nếu chương đang bị khóa
+            if (request.getCoinsPrice() <= 0) {
+                throw new BadRequestException("Giá xu phải > 0 với chương VIP");
+            }
+            chapter.setCoinsPrice(request.getCoinsPrice());
+        }
 
         return convertToResponse(chapterRepository.save(chapter));
     }

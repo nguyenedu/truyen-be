@@ -18,6 +18,11 @@ public class DashboardStatsResponse {
     private Long totalUsers;
     private Long totalViews;
 
+    // Doanh thu
+    private Long totalRevenue; // Tổng doanh thu (VND) từ trước đến nay
+    private Long totalSuccessOrders; // Tổng đơn thành công
+    private StatsComparison revenueComparison;
+
     private StatsComparison storiesComparison;
     private StatsComparison authorsComparison;
     private StatsComparison usersComparison;

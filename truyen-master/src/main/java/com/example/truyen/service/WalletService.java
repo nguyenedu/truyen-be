@@ -14,4 +14,8 @@ public interface WalletService {
     void spendCoins(Long userId, int amount, String description, Long refId);
 
     Page<WalletTransactionResponse> getMyTransactions(Pageable pageable);
+
+    WalletResponse getWalletByUserId(Long userId);
+
+    Page<WalletTransactionResponse> getTransactionsByUserId(Long userId, Pageable pageable);
 }

@@ -49,4 +49,24 @@ public class WalletController {
         Page<WalletTransactionResponse> transactions = walletService.getMyTransactions(pageable);
         return ResponseEntity.ok(ApiResponse.success("Get transactions successfully", transactions));
     }
+
+    // Admin: xem ví của user bất kỳ
+    @GetMapping("/admin/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<WalletResponse>> getUserWallet(@PathVariable Long userId) {
+        WalletResponse wallet = walletService.getWalletByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success("Get user wallet successfully", wallet));
+    }
+
+    // Admin: xem lịch sử giao dịch của user bất kỳ
+    @GetMapping("/admin/{userId}/transactions")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Page<WalletTransactionResponse>>> getUserTransactions(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<WalletTransactionResponse> transactions = walletService.getTransactionsByUserId(userId, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Get user transactions successfully", transactions));
+    }
 }

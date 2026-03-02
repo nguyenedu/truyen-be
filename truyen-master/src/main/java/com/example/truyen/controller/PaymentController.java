@@ -55,6 +55,17 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("Get my orders successfully", orders));
     }
 
+    // Admin: xem tất cả đơn hàng
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Page<PaymentOrderResponse>>> getAllOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<PaymentOrderResponse> orders = paymentService.getAllOrders(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Get all orders successfully", orders));
+    }
+
     // Lấy IP thực của client
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");

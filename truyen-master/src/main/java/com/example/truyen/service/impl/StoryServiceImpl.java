@@ -34,6 +34,7 @@ public class StoryServiceImpl implements StoryService {
     private final SearchProducer searchProducer;
     private final MinIoService minIoService;
     private final RatingRepository ratingRepository;
+    private final ChapterRepository chapterRepository;
 
     // Lấy danh sách truyện (batch rating query)
     @Transactional(readOnly = true)
@@ -279,6 +280,7 @@ public class StoryServiceImpl implements StoryService {
     private StoryResponse convertToResponse(Story story) {
         var averageRating = ratingRepository.getAverageRating(story.getId());
         var totalRatingsCount = ratingRepository.countByStoryId(story.getId());
+        boolean hasVip = chapterRepository.existsByStoryIdAndIsLockedTrue(story.getId());
 
         return StoryResponse.builder()
                 .id(story.getId())
@@ -296,6 +298,7 @@ public class StoryServiceImpl implements StoryService {
                 .updatedAt(story.getUpdatedAt())
                 .averageRating(averageRating != null ? Math.round(averageRating * 10.0) / 10.0 : 0.0)
                 .totalRatings(totalRatingsCount != null ? totalRatingsCount.intValue() : 0)
+                .hasVipChapters(hasVip)
                 .build();
     }
 
@@ -304,6 +307,7 @@ public class StoryServiceImpl implements StoryService {
             Map<Long, Long> countRatingMap) {
         var avgRating = avgRatingMap.getOrDefault(story.getId(), 0.0);
         var totalRatings = countRatingMap.getOrDefault(story.getId(), 0L);
+        boolean hasVip = chapterRepository.existsByStoryIdAndIsLockedTrue(story.getId());
 
         return StoryResponse.builder()
                 .id(story.getId())
@@ -321,6 +325,7 @@ public class StoryServiceImpl implements StoryService {
                 .updatedAt(story.getUpdatedAt())
                 .averageRating(Math.round(avgRating * 10.0) / 10.0)
                 .totalRatings(totalRatings.intValue())
+                .hasVipChapters(hasVip)
                 .build();
     }
 

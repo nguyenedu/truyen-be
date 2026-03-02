@@ -3,10 +3,15 @@ package com.example.truyen.controller;
 import com.example.truyen.dto.request.ChapterRequest;
 import com.example.truyen.dto.response.ApiResponse;
 import com.example.truyen.dto.response.ChapterResponse;
+import com.example.truyen.dto.response.UnlockedChapterResponse;
 import com.example.truyen.service.ChapterAccessService;
 import com.example.truyen.service.ChapterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -59,6 +64,17 @@ public class ChapterController {
     public ResponseEntity<ApiResponse<String>> unlockChapter(@PathVariable Long id) {
         chapterAccessService.unlockChapter(id);
         return ResponseEntity.ok(ApiResponse.success("Chapter unlocked successfully", null));
+    }
+
+    // Xem lịch sử chương đã mở khóa của tôi (yêu cầu đăng nhập)
+    @GetMapping("/my-unlocked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Page<UnlockedChapterResponse>>> getMyUnlockedChapters(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("accessedAt").descending());
+        Page<UnlockedChapterResponse> result = chapterAccessService.getMyUnlockedChapters(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Get unlocked chapters successfully", result));
     }
 
     // Tạo chương mới (Admin, Super Admin)

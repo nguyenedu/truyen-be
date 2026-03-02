@@ -14,4 +14,6 @@ public interface PaymentService {
     String handleVNPayReturn(Map<String, String> params);
 
     Page<PaymentOrderResponse> getMyOrders(Pageable pageable);
+
+    Page<PaymentOrderResponse> getAllOrders(Pageable pageable);
 }

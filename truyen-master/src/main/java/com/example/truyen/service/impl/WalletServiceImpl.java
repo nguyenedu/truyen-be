@@ -81,6 +81,29 @@ public class WalletServiceImpl implements WalletService {
                 .map(this::toTransactionResponse);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public WalletResponse getWalletByUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        UserWallet wallet = getOrCreateWallet(user);
+        return WalletResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .balance(wallet.getBalance())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<WalletTransactionResponse> getTransactionsByUserId(Long userId, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User", "id", userId);
+        }
+        return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(this::toTransactionResponse);
+    }
+
     private void saveTransaction(User user, WalletTransaction.Type type, int amount, int balanceAfter,
             String description, Long refId) {
         WalletTransaction tx = WalletTransaction.builder()

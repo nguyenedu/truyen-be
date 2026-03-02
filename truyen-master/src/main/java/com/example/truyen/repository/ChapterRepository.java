@@ -22,4 +22,6 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
     Optional<Integer> findMaxChapterNumberByStoryId(@Param("storyId") Long storyId);
 
     Boolean existsByStoryIdAndChapterNumber(Long storyId, Integer chapterNumber);
+
+    boolean existsByStoryIdAndIsLockedTrue(Long storyId);
 }

@@ -1,5 +1,6 @@
 package com.example.truyen.service.impl;
 
+import com.example.truyen.dto.response.UnlockedChapterResponse;
 import com.example.truyen.entity.Chapter;
 import com.example.truyen.entity.User;
 import com.example.truyen.entity.UserChapterAccess;
@@ -11,6 +12,8 @@ import com.example.truyen.repository.UserRepository;
 import com.example.truyen.service.ChapterAccessService;
 import com.example.truyen.service.WalletService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -78,6 +81,28 @@ public class ChapterAccessServiceImpl implements ChapterAccessService {
                 .build();
 
         accessRepository.save(access);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<UnlockedChapterResponse> getMyUnlockedChapters(Pageable pageable) {
+        User user = getCurrentUser();
+        return accessRepository.findByUserIdOrderByAccessedAtDesc(user.getId(), pageable)
+                .map(access -> {
+                    Chapter chapter = access.getChapter();
+                    return UnlockedChapterResponse.builder()
+                            .accessId(access.getId())
+                            .coinsSpent(access.getCoinsSpent())
+                            .unlockedAt(access.getAccessedAt())
+                            .chapterId(chapter.getId())
+                            .chapterNumber(chapter.getChapterNumber())
+                            .chapterTitle(chapter.getTitle())
+                            .coinsPrice(chapter.getCoinsPrice())
+                            .storyId(chapter.getStory().getId())
+                            .storyTitle(chapter.getStory().getTitle())
+                            .storyImage(chapter.getStory().getImage())
+                            .build();
+                });
     }
 
     private User getCurrentUser() {

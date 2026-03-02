@@ -29,6 +29,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final AuthorRepository authorRepository;
     private final ActivityLogRepository activityLogRepository;
     private final StoryViewRepository storyViewRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
 
     // Lấy toàn bộ thống kê dashboard
     @Transactional(readOnly = true)
@@ -73,6 +74,18 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Hoạt động gần đây
         stats.setRecentActivities(getRecentActivities());
+
+        // Doanh thu
+        long totalRevenue = paymentOrderRepository.sumRevenueByPeriod(
+                LocalDateTime.of(2000, 1, 1, 0, 0), LocalDateTime.now());
+        long currentRevenue = paymentOrderRepository.sumRevenueByPeriod(currentPeriodStart, LocalDateTime.now());
+        long previousRevenue = paymentOrderRepository.sumRevenueByPeriod(previousPeriodStart, previousPeriodEnd);
+        long totalSuccessOrders = paymentOrderRepository.countSuccessOrdersByPeriod(
+                LocalDateTime.of(2000, 1, 1, 0, 0), LocalDateTime.now());
+
+        stats.setTotalRevenue(totalRevenue);
+        stats.setTotalSuccessOrders(totalSuccessOrders);
+        stats.setRevenueComparison(calculateComparison(currentRevenue, previousRevenue));
 
         return stats;
     }
