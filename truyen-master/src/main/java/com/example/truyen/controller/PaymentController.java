@@ -7,10 +7,12 @@ import com.example.truyen.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,9 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @Value("${vnpay.frontend-return-url}")
+    private String frontendReturnUrl;
+
     // Tạo đơn nạp xu (yêu cầu đăng nhập)
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -37,11 +42,18 @@ public class PaymentController {
                 .body(ApiResponse.success("Create payment order successfully", order));
     }
 
-    // VNPay callback
+    // VNPay callback - redirect về frontend
     @GetMapping("/vnpay-return")
-    public ResponseEntity<ApiResponse<String>> vnpayReturn(@RequestParam Map<String, String> params) {
+    public ResponseEntity<Void> vnpayReturn(@RequestParam Map<String, String> params) {
         String result = paymentService.handleVNPayReturn(params);
-        return ResponseEntity.ok(ApiResponse.success("Payment processed", result));
+        String orderCode = params.getOrDefault("vnp_TxnRef", "");
+
+        String status = "SUCCESS".equals(result) ? "success" : "failed";
+        String redirectUrl = frontendReturnUrl + "?status=" + status + "&orderCode=" + orderCode;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Location", redirectUrl);
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
     // Xem lịch sử đơn hàng của tôi (yêu cầu đăng nhập)
