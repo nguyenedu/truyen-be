@@ -75,6 +75,16 @@ public class PaymentController {
         return ResponseEntity.ok(body);
     }
 
+    // Tra cứu trạng thái đơn theo orderCode (dùng bởi frontend sau redirect từ
+    // VNPay)
+    @GetMapping("/{orderCode}/status")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<PaymentOrderResponse>> getOrderStatus(
+            @PathVariable String orderCode) {
+        PaymentOrderResponse order = paymentService.getOrderStatus(orderCode);
+        return ResponseEntity.ok(ApiResponse.success("Get order status successfully", order));
+    }
+
     // Xem lịch sử đơn hàng của tôi (yêu cầu đăng nhập)
     @GetMapping("/my-orders")
     @PreAuthorize("isAuthenticated()")

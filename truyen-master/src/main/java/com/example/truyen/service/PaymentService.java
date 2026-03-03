@@ -13,11 +13,11 @@ public interface PaymentService {
 
     String handleVNPayReturn(Map<String, String> params);
 
-    // IPN: VNPay server gọi trực tiếp (server-to-server, không qua browser)
     String handleVNPayIPN(Map<String, String> params);
 
-    // Scheduled: hủy đơn PENDING quá 15 phút
     void cancelExpiredOrders();
+
+    PaymentOrderResponse getOrderStatus(String orderCode);
 
     Page<PaymentOrderResponse> getMyOrders(Pageable pageable);
 

@@ -197,6 +197,20 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public PaymentOrderResponse getOrderStatus(String orderCode) {
+        PaymentOrder order = paymentOrderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentOrder", "orderCode", orderCode));
+
+        User currentUser = getCurrentUser();
+        if (!order.getUser().getId().equals(currentUser.getId())) {
+            throw new BadRequestException("You do not have permission to view this order");
+        }
+
+        return toResponse(order, null);
+    }
+
     private User getCurrentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)

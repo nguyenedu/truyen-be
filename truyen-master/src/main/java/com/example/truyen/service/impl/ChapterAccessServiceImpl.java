@@ -12,6 +12,7 @@ import com.example.truyen.repository.UserRepository;
 import com.example.truyen.service.ChapterAccessService;
 import com.example.truyen.service.WalletService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChapterAccessServiceImpl implements ChapterAccessService {
 
     private final UserChapterAccessRepository accessRepository;
@@ -68,19 +70,28 @@ public class ChapterAccessServiceImpl implements ChapterAccessService {
             throw new BadRequestException("You already unlocked this chapter");
         }
 
+        // Trừ xu trước
         walletService.spendCoins(
                 user.getId(),
                 chapter.getCoinsPrice(),
                 "Mo khoa chuong " + chapter.getChapterNumber() + " - " + chapter.getStory().getTitle(),
                 chapterId);
 
-        UserChapterAccess access = UserChapterAccess.builder()
-                .user(user)
-                .chapter(chapter)
-                .coinsSpent(chapter.getCoinsPrice())
-                .build();
-
-        accessRepository.save(access);
+        // Lưu quyền truy cập — nếu bước này lỗi, @Transactional sẽ rollback
+        // toàn bộ giao dịch (bao gồm cả spendCoins) → xu được hoàn tự động
+        try {
+            UserChapterAccess access = UserChapterAccess.builder()
+                    .user(user)
+                    .chapter(chapter)
+                    .coinsSpent(chapter.getCoinsPrice())
+                    .build();
+            accessRepository.save(access);
+        } catch (Exception e) {
+            // Transaction sẽ rollback — xu sẽ được hoàn tự động
+            log.error("Failed to save chapter access for user {} chapter {}: {}",
+                    user.getId(), chapterId, e.getMessage());
+            throw new RuntimeException("Unlock chapter failed. Your coins have been refunded.", e);
+        }
     }
 
     @Transactional(readOnly = true)
