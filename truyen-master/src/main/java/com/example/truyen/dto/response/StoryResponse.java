@@ -28,5 +28,5 @@ public class StoryResponse {
     private LocalDateTime updatedAt;
     private Double averageRating;
     private Integer totalRatings;
-    private Boolean hasVipChapters; // true nếu truyện có ít nhất 1 chương VIP
+    private Boolean hasVipChapters;
 }

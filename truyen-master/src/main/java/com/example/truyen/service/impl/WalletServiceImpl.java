@@ -130,6 +130,13 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public Page<WalletTransactionResponse> getAllTransactions(Pageable pageable) {
+        return transactionRepository.findAll(pageable)
+                .map(this::toTransactionResponse);
+    }
+
     private WalletTransactionResponse toTransactionResponse(WalletTransaction tx) {
         return WalletTransactionResponse.builder()
                 .id(tx.getId())

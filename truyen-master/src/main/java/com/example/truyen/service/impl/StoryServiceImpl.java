@@ -344,4 +344,9 @@ public class StoryServiceImpl implements StoryService {
                         row -> (Long) row[0],
                         row -> (Long) row[1]));
     }
+
+    @Override
+    public boolean hasVipChapters(Long storyId) {
+        return chapterRepository.existsByStoryIdAndIsLockedTrue(storyId);
+    }
 }

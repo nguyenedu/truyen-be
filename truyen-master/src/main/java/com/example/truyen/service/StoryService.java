@@ -45,4 +45,7 @@ public interface StoryService {
 
     // Lấy danh sách truyện của tác giả
     List<StoryResponse> getStoriesByAuthor(Long authorId);
+
+    // Kiểm tra truyện có chương VIP không
+    boolean hasVipChapters(Long storyId);
 }

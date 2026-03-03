@@ -11,4 +11,6 @@ public interface ChapterAccessService {
     void unlockChapter(Long chapterId);
 
     Page<UnlockedChapterResponse> getMyUnlockedChapters(Pageable pageable);
+
+    Page<UnlockedChapterResponse> getUnlockedUsersByChapterId(Long chapterId, Pageable pageable);
 }

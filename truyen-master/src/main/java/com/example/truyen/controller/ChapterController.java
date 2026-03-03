@@ -77,6 +77,17 @@ public class ChapterController {
         return ResponseEntity.ok(ApiResponse.success("Get unlocked chapters successfully", result));
     }
 
+    @GetMapping("/{id}/unlocked-users")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Page<UnlockedChapterResponse>>> getUnlockedUsersByChapter(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("accessedAt").descending());
+        Page<UnlockedChapterResponse> result = chapterAccessService.getUnlockedUsersByChapterId(id, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Get unlocked users successfully", result));
+    }
+
     // Tạo chương mới (Admin, Super Admin)
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")

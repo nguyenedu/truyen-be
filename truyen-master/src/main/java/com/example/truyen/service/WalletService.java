@@ -18,4 +18,7 @@ public interface WalletService {
     WalletResponse getWalletByUserId(Long userId);
 
     Page<WalletTransactionResponse> getTransactionsByUserId(Long userId, Pageable pageable);
+
+    // Admin: xem tất cả giao dịch (phân trang)
+    Page<WalletTransactionResponse> getAllTransactions(Pageable pageable);
 }

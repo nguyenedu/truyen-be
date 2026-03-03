@@ -110,4 +110,25 @@ public class ChapterAccessServiceImpl implements ChapterAccessService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<UnlockedChapterResponse> getUnlockedUsersByChapterId(Long chapterId, Pageable pageable) {
+        return accessRepository.findByChapterIdOrderByAccessedAtDesc(chapterId, pageable)
+                .map(access -> {
+                    Chapter chapter = access.getChapter();
+                    return UnlockedChapterResponse.builder()
+                            .accessId(access.getId())
+                            .coinsSpent(access.getCoinsSpent())
+                            .unlockedAt(access.getAccessedAt())
+                            .chapterId(chapter.getId())
+                            .chapterNumber(chapter.getChapterNumber())
+                            .chapterTitle(chapter.getTitle())
+                            .coinsPrice(chapter.getCoinsPrice())
+                            .storyId(chapter.getStory().getId())
+                            .storyTitle(chapter.getStory().getTitle())
+                            .storyImage(chapter.getStory().getImage())
+                            .build();
+                });
+    }
 }

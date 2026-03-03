@@ -30,8 +30,9 @@ public class DashboardServiceImpl implements DashboardService {
     private final ActivityLogRepository activityLogRepository;
     private final StoryViewRepository storyViewRepository;
     private final PaymentOrderRepository paymentOrderRepository;
+    private final ChapterRepository chapterRepository;
+    private final UserChapterAccessRepository userChapterAccessRepository;
 
-    // Lấy toàn bộ thống kê dashboard
     @Transactional(readOnly = true)
     @Override
     public DashboardStatsResponse getDashboardStats(String period) {
@@ -86,6 +87,11 @@ public class DashboardServiceImpl implements DashboardService {
         stats.setTotalRevenue(totalRevenue);
         stats.setTotalSuccessOrders(totalSuccessOrders);
         stats.setRevenueComparison(calculateComparison(currentRevenue, previousRevenue));
+
+        // VIP stats
+        stats.setTotalVipChapters(chapterRepository.countByIsLockedTrue());
+        stats.setTotalUnlocks(userChapterAccessRepository.count());
+        stats.setTotalCoinsConsumed(userChapterAccessRepository.sumTotalCoinsSpent());
 
         return stats;
     }

@@ -78,17 +78,45 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Các endpoint công khai
+
+                        // Auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/stories/**").permitAll()
-                        .requestMatchers("/api/chapters/**").permitAll()
+
+                        // Stories - đọc công khai, ghi cần quyền
+                        .requestMatchers(HttpMethod.GET, "/api/stories/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/stories/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/stories/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/stories/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // Chapters - đọc công khai, một số endpoint cần auth
+                        .requestMatchers(HttpMethod.GET, "/api/chapters/my-unlocked").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/chapters/*/unlocked-users")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/chapters/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/chapters/*/unlock").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/chapters/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/chapters/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/chapters/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // Wallet - ví cá nhân cần auth, admin cần ADMIN role
+                        .requestMatchers("/api/wallet/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/wallet/**").authenticated()
+
+                        // Payments - VNPay callback công khai, admin endpoint cần ADMIN role
+                        .requestMatchers("/api/payments/vnpay-return").permitAll()
+                        .requestMatchers("/api/payments/all").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/payments/**").authenticated()
+
+                        // Coin packages - đọc công khai, quản lý cần ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/coin-packages/**").permitAll()
+                        .requestMatchers("/api/coin-packages/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // Các endpoint khác công khai
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/authors/**").permitAll()
                         .requestMatchers("/api/trending/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ratings/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/coin-packages/**").permitAll()
-                        .requestMatchers("/api/payments/vnpay-return").permitAll()
 
                         // Swagger
                         .requestMatchers("/swagger-ui/**").permitAll()

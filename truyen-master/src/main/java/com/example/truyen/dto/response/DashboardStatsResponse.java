@@ -18,10 +18,13 @@ public class DashboardStatsResponse {
     private Long totalUsers;
     private Long totalViews;
 
-    // Doanh thu
-    private Long totalRevenue; // Tổng doanh thu (VND) từ trước đến nay
-    private Long totalSuccessOrders; // Tổng đơn thành công
+    private Long totalRevenue;
+    private Long totalSuccessOrders;
     private StatsComparison revenueComparison;
+
+    private Long totalVipChapters;
+    private Long totalUnlocks;
+    private Long totalCoinsConsumed;
 
     private StatsComparison storiesComparison;
     private StatsComparison authorsComparison;
@@ -46,7 +49,7 @@ public class DashboardStatsResponse {
         private Long currentValue;
         private Long previousValue;
         private Double changePercent;
-        private String trend; // "up" hoặc "down"
+        private String trend;
     }
 
     @Data

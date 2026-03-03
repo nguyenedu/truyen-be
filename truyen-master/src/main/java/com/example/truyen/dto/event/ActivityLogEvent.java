@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// DTO cho Activity Log Event gửi qua Kafka
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,7 +23,6 @@ public class ActivityLogEvent {
     private String ipAddress;
     private LocalDateTime timestamp;
 
-    // Tạo ActivityLogEvent
     public static ActivityLogEvent create(String action, String entityType, Long entityId,
             String entityName, Long userId, String username, String details, String ipAddress) {
         return ActivityLogEvent.builder()
