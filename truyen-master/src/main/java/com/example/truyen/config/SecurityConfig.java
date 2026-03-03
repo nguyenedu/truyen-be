@@ -104,6 +104,7 @@ public class SecurityConfig {
 
                         // Payments - VNPay callback công khai, admin endpoint cần ADMIN role
                         .requestMatchers("/api/payments/vnpay-return").permitAll()
+                        .requestMatchers("/api/payments/vnpay-ipn").permitAll()
                         .requestMatchers("/api/payments/all").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/payments/**").authenticated()
 

@@ -56,6 +56,25 @@ public class PaymentController {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
+    // VNPay IPN - server-to-server, không qua browser
+    // VNPay yêu cầu trả về JSON: {"RspCode": "xx", "Message": "..."
+    @GetMapping("/vnpay-ipn")
+    public ResponseEntity<java.util.LinkedHashMap<String, String>> vnpayIPN(
+            @RequestParam Map<String, String> params) {
+        String rspCode = paymentService.handleVNPayIPN(params);
+        String message = switch (rspCode) {
+            case "00" -> "Confirm Success";
+            case "97" -> "Invalid Checksum";
+            case "01" -> "Order Not Found";
+            case "02" -> "Order Already Confirmed";
+            default -> "Unknown Error";
+        };
+        java.util.LinkedHashMap<String, String> body = new java.util.LinkedHashMap<>();
+        body.put("RspCode", rspCode);
+        body.put("Message", message);
+        return ResponseEntity.ok(body);
+    }
+
     // Xem lịch sử đơn hàng của tôi (yêu cầu đăng nhập)
     @GetMapping("/my-orders")
     @PreAuthorize("isAuthenticated()")

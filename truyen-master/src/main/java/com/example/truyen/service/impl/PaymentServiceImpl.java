@@ -14,8 +14,10 @@ import com.example.truyen.service.PaymentService;
 import com.example.truyen.service.VNPayService;
 import com.example.truyen.service.WalletService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentOrderRepository paymentOrderRepository;
@@ -123,6 +126,75 @@ public class PaymentServiceImpl implements PaymentService {
     public Page<PaymentOrderResponse> getAllOrders(Pageable pageable) {
         return paymentOrderRepository.findAllByOrderByCreatedAtDesc(pageable)
                 .map(o -> toResponse(o, null));
+    }
+
+    /**
+     * IPN handler: VNPay gọi server-to-server ngay sau khi thanh toán xong.
+     * Phải trả về đúng định dạng JSON: {"RspCode": "00", "Message": "OK"}
+     */
+    @Transactional
+    @Override
+    public String handleVNPayIPN(Map<String, String> params) {
+        if (!vnPayService.verifyCallback(params)) {
+            log.warn("IPN: invalid signature");
+            return "97"; // Invalid signature
+        }
+
+        String txnRef = params.get("vnp_TxnRef");
+        String transactionNo = params.get("vnp_TransactionNo");
+        String responseCode = params.get("vnp_ResponseCode");
+
+        PaymentOrder order = paymentOrderRepository.findByOrderCode(txnRef).orElse(null);
+        if (order == null) {
+            log.warn("IPN: order not found for txnRef={}", txnRef);
+            return "01"; // Order not found
+        }
+
+        if (order.getStatus() != PaymentOrder.Status.PENDING) {
+            log.info("IPN: order {} already processed (status={})", txnRef, order.getStatus());
+            return "02"; // Already confirmed
+        }
+
+        if (paymentOrderRepository.existsByVnpTransactionNo(transactionNo)) {
+            log.warn("IPN: duplicate transaction {}", transactionNo);
+            return "02"; // Duplicate
+        }
+
+        order.setVnpTransactionNo(transactionNo);
+
+        if ("00".equals(responseCode)) {
+            order.setStatus(PaymentOrder.Status.SUCCESS);
+            order.setCompletedAt(LocalDateTime.now());
+            paymentOrderRepository.save(order);
+            walletService.addCoins(
+                    order.getUser().getId(),
+                    order.getCoinsToAdd(),
+                    "Nap xu - don hang " + order.getOrderCode(),
+                    order.getId());
+            log.info("IPN: order {} SUCCESS, added {} coins to user {}",
+                    txnRef, order.getCoinsToAdd(), order.getUser().getId());
+            return "00";
+        } else {
+            order.setStatus(PaymentOrder.Status.FAILED);
+            paymentOrderRepository.save(order);
+            log.info("IPN: order {} FAILED, responseCode={}", txnRef, responseCode);
+            return "00"; // VNPay yêu cầu luôn trả 00 dù thành công hay thất bại
+        }
+    }
+
+    /**
+     * Scheduled: chạy mỗi phút, hủy hàng loạt đơn PENDING quá 15 phút.
+     * Dùng bulk UPDATE thay vì load từng entity.
+     */
+    @Scheduled(fixedRate = 60_000)
+    @Transactional
+    @Override
+    public void cancelExpiredOrders() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(15);
+        int cancelled = paymentOrderRepository.cancelPendingOrdersBefore(cutoff);
+        if (cancelled > 0) {
+            log.info("Cancelled {} expired PENDING orders (older than 15 minutes)", cancelled);
+        }
     }
 
     private User getCurrentUser() {

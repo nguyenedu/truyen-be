@@ -16,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +45,7 @@ public class TrendingServiceImpl implements TrendingService {
     private final CommentRepository commentRepository;
     private final RankingRepository rankingRepository;
     private final StoryViewService viewService;
+    private final StoryViewRepository storyViewRepository;
 
     // Logic cốt lõi tính toán và cập nhật xu hướng
     @Override
@@ -125,7 +129,14 @@ public class TrendingServiceImpl implements TrendingService {
                 return;
             }
 
-            var trendingList = stories.parallelStream()
+            // Build Map<storyId, Story> từ list đã load để tránh N+1 lookup sau này
+            Map<Long, Story> storyMap = stories.stream()
+                    .collect(Collectors.toMap(Story::getId, s -> s));
+
+            // FIX 1: dùng stream() thay vì parallelStream()
+            // parallelStream() trong @Transactional gây lỗi vì sub-threads không có
+            // transaction context
+            var trendingList = stories.stream()
                     .map(story -> {
                         try {
                             double score = calculateTrendingScore(story, days);
@@ -136,7 +147,7 @@ public class TrendingServiceImpl implements TrendingService {
                             var categoryNames = story.getCategories() != null
                                     ? story.getCategories().stream().map(cat -> cat.getName())
                                             .collect(Collectors.toList())
-                                    : new java.util.ArrayList<String>();
+                                    : new ArrayList<String>();
 
                             return StoryTrendingDTO.builder()
                                     .id(story.getId())
@@ -171,21 +182,24 @@ public class TrendingServiceImpl implements TrendingService {
 
             rankingRepository.deleteByRankingTypeAndDate(rankingType, today);
 
+            // FIX 2: dùng Map<storyId, Story> thay vì findById() từng item → tránh N+1
+            // Sau đó dùng saveAll() thay vì save() từng cái
+            List<Ranking> rankings = new ArrayList<>();
             int rank = 1;
             for (StoryTrendingDTO dto : trendingList) {
-                final int currentRank = rank;
-                storyRepository.findById(dto.getId()).ifPresent(story -> {
-                    var ranking = Ranking.builder()
+                Story story = storyMap.get(dto.getId());
+                if (story != null) {
+                    rankings.add(Ranking.builder()
                             .story(story)
-                            .rankPosition(currentRank)
+                            .rankPosition(rank)
                             .rankingType(rankingType)
                             .rankingDate(today)
                             .views(dto.getTotalViews())
-                            .build();
-                    rankingRepository.save(ranking);
-                });
+                            .build());
+                }
                 dto.setRank(rank++);
             }
+            rankingRepository.saveAll(rankings);
 
             cacheToRedis(redisKey, trendingList, rankingType);
             log.info("Successfully refreshed {} trending with {} items", rankingType, trendingList.size());
@@ -221,7 +235,8 @@ public class TrendingServiceImpl implements TrendingService {
         }
     }
 
-    // Lấy max view trong N ngày để chuẩn hóa điểm số
+    // FIX 3: Thay vì findAll() + N query getRecentViews(),
+    // dùng 1 query duy nhất để lấy max views (cached 30 phút trong Redis)
     private Long getMaxRecentViews(int days) {
         String key = RedisKeyConstants.MAX_VIEWS_PREFIX + days + "d";
 
@@ -234,10 +249,9 @@ public class TrendingServiceImpl implements TrendingService {
             log.warn("Failed to read max views from cache: {}", e.getMessage());
         }
 
-        long max = storyRepository.findAll().stream()
-                .mapToLong(s -> viewService.getRecentViews(s.getId(), days))
-                .max()
-                .orElse(1L);
+        // 1 query duy nhất thay vì findAll() + N query
+        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        long max = storyViewRepository.findMaxViewCountSince(since);
 
         try {
             redisTemplate.opsForValue().set(key, max, Duration.ofMinutes(30));

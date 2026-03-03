@@ -19,7 +19,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
-// Consumer xử lý View Events từ Kafka
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -28,7 +27,6 @@ public class ViewEventConsumer {
     private final RedisTemplate<String, Object> redisTemplate;
     private final StoryRepository storyRepository;
 
-    // Xử lý view events từ Kafka topic
     @KafkaListener(topics = KafkaTopicConfig.STORY_VIEW_EVENTS, groupId = "view-tracking-group", containerFactory = "kafkaListenerContainerFactory", batch = "true")
     @Transactional
     public void consumeViewEvents(
@@ -38,58 +36,61 @@ public class ViewEventConsumer {
 
         try {
             log.debug("Processing {} view events from partitions: {}", events.size(), partitions);
-
             for (ViewEvent event : events) {
                 processViewEvent(event);
             }
-
-            // Commit thủ công sau khi xử lý thành công
             if (acknowledgment != null) {
                 acknowledgment.acknowledge();
             }
-
             log.debug("Successfully processed {} view events", events.size());
-
         } catch (Exception e) {
             log.error("Error processing view events batch: {}", e.getMessage(), e);
         }
     }
 
-    // Xử lý từng view event
     private void processViewEvent(ViewEvent event) {
         try {
             String today = LocalDate.now().toString();
             Long storyId = event.getStoryId();
             Long userId = event.getUserId();
 
-            // 1. Tăng lượng xem trong ngày
-            String viewKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
-            Long currentViews = redisTemplate.opsForValue().increment(viewKey, 1);
-            redisTemplate.expire(viewKey, Duration.ofDays(1));
+            // 1. Tăng tổng lượt xem tích lũy (dùng chung với StoryViewServiceImpl)
+            String totalKey = RedisKeyConstants.STORY_TOTAL_VIEWS + storyId;
+            Long totalViews = redisTemplate.opsForValue().increment(totalKey);
 
-            // 2. Đếm số lượng người dùng đã xem trong ngày (nếu có userId)
+            // 2. Tăng lượt xem hôm nay (TTL: 1 ngày)
+            String todayKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
+            redisTemplate.opsForValue().increment(todayKey);
+            redisTemplate.expire(todayKey, Duration.ofDays(1));
+
+            // 3. Tăng lượt xem theo ngày cụ thể (cho trending, TTL: 35 ngày)
+            String dateKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
+            redisTemplate.opsForValue().increment(dateKey);
+            redisTemplate.expire(dateKey, Duration.ofDays(35));
+
+            // 4. Track unique viewer hôm nay nếu có userId (TTL: 1 ngày)
             if (userId != null) {
-                String viewerKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
-                redisTemplate.opsForSet().add(viewerKey, userId);
-                redisTemplate.expire(viewerKey, Duration.ofDays(1));
+                String uniqueKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
+                redisTemplate.opsForSet().add(uniqueKey, userId);
+                redisTemplate.expire(uniqueKey, Duration.ofDays(1));
             }
 
-            // 3. Tăng lượt xem theo ngày
-            String dateViewKey = RedisKeyConstants.STORY_VIEWS_DATE + today + ":" + storyId;
-            redisTemplate.opsForValue().increment(dateViewKey, 1);
-            redisTemplate.expire(dateViewKey, Duration.ofDays(35));
-
-            // 4. Đồng bộ hóa với database sau mỗi 100 lượt xem
-            if (currentViews != null && currentViews % 100 == 0) {
+            // 5. Fast-path sync: cộng dồn vào MySQL mỗi 100 lượt xem từ Kafka
+            // Đồng thời cập nhật STORY_DB_SYNCED_VIEWS để scheduled job không sync lại
+            if (totalViews != null && totalViews % 100 == 0) {
                 storyRepository.incrementTotalViews(storyId, 100);
-                log.debug("Synced 100 views to database for story ID: {}", storyId);
+
+                // Cập nhật mốc đã sync để scheduled job tính delta chính xác
+                String syncedKey = RedisKeyConstants.STORY_DB_SYNCED_VIEWS + storyId;
+                redisTemplate.opsForValue().set(syncedKey, totalViews);
+
+                log.debug("Fast-path: synced 100 views to DB for story {}, total={}", storyId, totalViews);
             }
 
-            log.trace("View event processed for story ID: {} by user ID: {}", storyId, userId);
+            log.trace("View event processed for story {}, user {}", storyId, userId);
 
         } catch (Exception e) {
-            log.error("Failed to process view event for story ID: {}: {}",
-                    event.getStoryId(), e.getMessage());
+            log.error("Failed to process view event for story {}: {}", event.getStoryId(), e.getMessage());
             throw e;
         }
     }

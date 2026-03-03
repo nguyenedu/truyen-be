@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -25,43 +26,49 @@ public class StoryViewServiceImpl implements StoryViewService {
     private final StoryViewRepository storyViewRepository;
     private final StoryRepository storyRepository;
 
-    // Theo dõi lượt xem truyện
     @Override
     public void trackView(Long storyId, String visitorId) {
-        String viewCountKey = RedisKeyConstants.VIEW_COUNT_PREFIX + storyId;
-        String uniqueViewerKey = RedisKeyConstants.UNIQUE_VIEWERS_PREFIX + storyId + ":" + LocalDate.now();
-        String dailyViewKey = RedisKeyConstants.DAILY_VIEW_PREFIX + storyId + ":" + LocalDate.now();
+        String todayKey = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
+        String dateKey = RedisKeyConstants.STORY_VIEWS_DATE + LocalDate.now() + ":" + storyId;
+        String uniqueKey = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
+        String totalKey = RedisKeyConstants.STORY_TOTAL_VIEWS + storyId;
 
         try {
-            redisTemplate.opsForValue().increment(viewCountKey);
-            redisTemplate.expire(viewCountKey, Duration.ofDays(7));
+            // 1. Tăng tổng lượt xem tích lũy trong Redis
+            redisTemplate.opsForValue().increment(totalKey);
 
+            // 2. Tăng lượt xem hôm nay (TTL: 1 ngày)
+            redisTemplate.opsForValue().increment(todayKey);
+            redisTemplate.expire(todayKey, Duration.ofDays(1));
+
+            // 3. Tăng lượt xem theo ngày cụ thể (cho trending, TTL: 35 ngày)
+            redisTemplate.opsForValue().increment(dateKey);
+            redisTemplate.expire(dateKey, Duration.ofDays(35));
+
+            // 4. Track unique viewer hôm nay (TTL: 1 ngày)
             String visitorKey = visitorId != null ? visitorId : "anonymous_" + System.currentTimeMillis();
-            redisTemplate.opsForSet().add(uniqueViewerKey, visitorKey);
-            redisTemplate.expire(uniqueViewerKey, Duration.ofDays(1));
+            redisTemplate.opsForSet().add(uniqueKey, visitorKey);
+            redisTemplate.expire(uniqueKey, Duration.ofDays(1));
 
-            redisTemplate.opsForValue().increment(dailyViewKey);
-            redisTemplate.expire(dailyViewKey, Duration.ofDays(1));
-
+            // 5. Lưu bản ghi chi tiết vào DB
             StoryView view = StoryView.builder()
                     .storyId(storyId)
                     .visitorId(visitorId)
                     .viewedAt(LocalDateTime.now())
                     .build();
             storyViewRepository.save(view);
+
         } catch (Exception e) {
             log.error("Error tracking view for story {}: {}", storyId, e.getMessage());
         }
     }
 
-    // Theo dõi lượt xem truyện với userId
     @Override
     public void trackView(Long storyId, Long userId, String visitorId) {
         String visitor = userId != null ? "user_" + userId : visitorId;
         trackView(storyId, visitor);
     }
 
-    // Lấy lượt xem gần đây trong N ngày
     @Override
     public long getRecentViews(Long storyId, int days) {
         try {
@@ -74,11 +81,10 @@ public class StoryViewServiceImpl implements StoryViewService {
         }
     }
 
-    // Đếm số người xem duy nhất hôm nay
     @Override
     public long getUniqueViewersToday(Long storyId) {
         try {
-            String key = RedisKeyConstants.UNIQUE_VIEWERS_PREFIX + storyId + ":" + LocalDate.now();
+            String key = RedisKeyConstants.STORY_UNIQUE_VIEWERS_TODAY + storyId;
             Long count = redisTemplate.opsForSet().size(key);
             return count != null ? count : 0L;
         } catch (Exception e) {
@@ -86,11 +92,10 @@ public class StoryViewServiceImpl implements StoryViewService {
         }
     }
 
-    // Đếm lượt xem hôm nay
     @Override
     public long getViewsToday(Long storyId) {
         try {
-            String key = RedisKeyConstants.DAILY_VIEW_PREFIX + storyId + ":" + LocalDate.now();
+            String key = RedisKeyConstants.STORY_VIEWS_TODAY + storyId;
             Object count = redisTemplate.opsForValue().get(key);
             return count != null ? Long.parseLong(count.toString()) : 0L;
         } catch (Exception e) {
@@ -98,24 +103,62 @@ public class StoryViewServiceImpl implements StoryViewService {
         }
     }
 
-    // Đồng bộ lượt xem từ Redis vào database
+    /**
+     * Delta sync: chạy mỗi 5 phút.
+     * Dùng Redis SCAN để tìm tất cả key story:total:views:* còn tồn tại,
+     * tính delta giữa tổng views và số đã sync trước đó, rồi chỉ
+     * incrementTotalViews(delta).
+     * Không gọi findAll() và không overwrite toàn bộ totalViews.
+     */
     @Scheduled(fixedRate = 300000)
     @Transactional
     @Override
     public void syncAllViewsToDatabase() {
         try {
-            var stories = storyRepository.findAll();
-            for (var story : stories) {
-                String key = RedisKeyConstants.VIEW_COUNT_PREFIX + story.getId();
-                Object redisViews = redisTemplate.opsForValue().get(key);
-                if (redisViews != null) {
-                    long views = Long.parseLong(redisViews.toString());
-                    story.setTotalViews((int) views);
-                    storyRepository.save(story);
+            String pattern = RedisKeyConstants.STORY_TOTAL_VIEWS + "*";
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys == null || keys.isEmpty())
+                return;
+
+            int synced = 0;
+            for (String totalKey : keys) {
+                try {
+                    // Lấy storyId từ key "story:total:views:{storyId}"
+                    String storyIdStr = totalKey.substring(RedisKeyConstants.STORY_TOTAL_VIEWS.length());
+                    Long storyId = Long.parseLong(storyIdStr);
+
+                    Object totalObj = redisTemplate.opsForValue().get(totalKey);
+                    if (totalObj == null)
+                        continue;
+                    long totalViews = Long.parseLong(totalObj.toString());
+
+                    // Lấy số views đã sync lần trước
+                    String syncedKey = RedisKeyConstants.STORY_DB_SYNCED_VIEWS + storyId;
+                    Object syncedObj = redisTemplate.opsForValue().get(syncedKey);
+                    long alreadySynced = syncedObj != null ? Long.parseLong(syncedObj.toString()) : 0L;
+
+                    long delta = totalViews - alreadySynced;
+                    if (delta <= 0)
+                        continue;
+
+                    // Chỉ cộng phần chênh lệch vào MySQL
+                    storyRepository.incrementTotalViews(storyId, (int) delta);
+
+                    // Cập nhật mốc đã sync
+                    redisTemplate.opsForValue().set(syncedKey, totalViews);
+                    synced++;
+
+                } catch (Exception e) {
+                    log.error("Error syncing views for key {}: {}", totalKey, e.getMessage());
                 }
             }
+
+            if (synced > 0) {
+                log.info("Scheduled sync: updated totalViews for {} stories", synced);
+            }
+
         } catch (Exception e) {
-            log.error("Error syncing views: {}", e.getMessage());
+            log.error("Error in scheduled sync: {}", e.getMessage());
         }
     }
 }
