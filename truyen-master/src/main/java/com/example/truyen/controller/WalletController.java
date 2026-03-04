@@ -39,6 +39,17 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success("Added " + amount + " coins to user " + userId, null));
     }
 
+    // Trừ xu trực tiếp của user (Admin, Super Admin)
+    @PostMapping("/deduct-coins")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deductCoins(
+            @RequestParam Long userId,
+            @RequestParam int amount,
+            @RequestParam(defaultValue = "Admin deduction") String description) {
+        walletService.spendCoins(userId, amount, description, null);
+        return ResponseEntity.ok(ApiResponse.success("Deducted " + amount + " coins from user " + userId, null));
+    }
+
     // Xem lịch sử giao dịch của tôi (yêu cầu đăng nhập)
     @GetMapping("/transactions")
     @PreAuthorize("isAuthenticated()")
