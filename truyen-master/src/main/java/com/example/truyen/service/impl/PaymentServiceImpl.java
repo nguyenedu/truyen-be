@@ -82,7 +82,7 @@ public class PaymentServiceImpl implements PaymentService {
         String txnRef = params.get("vnp_TxnRef");
         String transactionNo = params.get("vnp_TransactionNo");
 
-        PaymentOrder order = paymentOrderRepository.findByOrderCode(txnRef)
+        PaymentOrder order = paymentOrderRepository.findByOrderCodeForUpdate(txnRef)
                 .orElseThrow(() -> new ResourceNotFoundException("PaymentOrder", "orderCode", txnRef));
 
         if (order.getStatus() != PaymentOrder.Status.PENDING) {
@@ -144,7 +144,7 @@ public class PaymentServiceImpl implements PaymentService {
         String transactionNo = params.get("vnp_TransactionNo");
         String responseCode = params.get("vnp_ResponseCode");
 
-        PaymentOrder order = paymentOrderRepository.findByOrderCode(txnRef).orElse(null);
+        PaymentOrder order = paymentOrderRepository.findByOrderCodeForUpdate(txnRef).orElse(null);
         if (order == null) {
             log.warn("IPN: order not found for txnRef={}", txnRef);
             return "01"; // Order not found

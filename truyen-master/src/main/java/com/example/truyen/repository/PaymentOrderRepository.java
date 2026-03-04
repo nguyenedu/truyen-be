@@ -1,9 +1,11 @@
 package com.example.truyen.repository;
 
 import com.example.truyen.entity.PaymentOrder;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,10 @@ import java.util.Optional;
 public interface PaymentOrderRepository extends JpaRepository<PaymentOrder, Long> {
 
     Optional<PaymentOrder> findByOrderCode(String orderCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PaymentOrder p WHERE p.orderCode = :orderCode")
+    Optional<PaymentOrder> findByOrderCodeForUpdate(@Param("orderCode") String orderCode);
 
     boolean existsByVnpTransactionNo(String vnpTransactionNo);
 
