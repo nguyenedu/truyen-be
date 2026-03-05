@@ -34,11 +34,19 @@ public class StoryController {
                                 storyService.getAllStories(page, size)));
         }
 
-        // Lấy chi tiết truyện theo ID và tăng lượt xem
+        // Lấy chi tiết truyện theo ID và tăng lượt xem (dùng cho user)
         @GetMapping("/{id}")
         public ResponseEntity<ApiResponse<StoryResponse>> getStoryById(@PathVariable Long id) {
                 var story = storyService.getStoryById(id);
                 storyService.increaseView(id);
+                return ResponseEntity.ok(ApiResponse.success("Get story details successfully", story));
+        }
+
+        // Lấy chi tiết truyện theo ID KHÔNG tăng lượt xem (dùng cho admin)
+        @GetMapping("/{id}/detail")
+        @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+        public ResponseEntity<ApiResponse<StoryResponse>> getStoryByIdAdmin(@PathVariable Long id) {
+                var story = storyService.getStoryById(id);
                 return ResponseEntity.ok(ApiResponse.success("Get story details successfully", story));
         }
 
